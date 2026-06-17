@@ -1,0 +1,6 @@
+{
+  "name": "English Tutor",
+  "description": "An AI-powered English learning app with voice conversation and grammar correction.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
