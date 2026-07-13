@@ -2,9 +2,9 @@
 
 **Agent Instruction**: You are allowed to read this file and ARCHITECTURE.md only. You must execute ONLY the task listed below. Once finished, stop immediately and wait for user review. DO NOT create, plan, or execute any other tasks.
 
-- [ ] **Task 3**: Create the `OnboardingViewModel` and its corresponding UI State classes inside the `viewmodel/` package. 
-  - Implement the logic to format the system prompt for the Google Gemini API.
-  - Implement a function to request the AI, parse the returned JSON user profile, and save it to the database using `ProfileRepository`. 
-  - Use Manual DI (ViewModelProvider.Factory) to inject the repository into the ViewModel. 
-  - DO NOT connect it to the Compose UI yet.
+- [ ] **Task 4**: Connect the completed `OnboardingViewModel` to the existing Compose UI (`OnboardingScreen` or equivalent in the `ui/` package). 
+  - Observe the UI state flow from the ViewModel.
+  - Bind user inputs and button clicks to the ViewModel's intents (e.g., submitting answers for the evaluation).
+  - Ensure Loading and Error states are correctly displayed on the screen based on the ViewModel's state.
+  - DO NOT modify the core business logic in the ViewModel, only handle the UI integration.
   - 
