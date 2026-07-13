@@ -15,8 +15,11 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ui.ChatScreen
 import com.example.ui.ChatViewModel
 import com.example.ui.HistoryScreen
+import com.example.ui.OnboardingScreen
 import com.example.ui.Route
 import com.example.ui.theme.MyApplicationTheme
+import com.example.viewmodel.OnboardingViewModel
+import com.example.viewmodel.OnboardingViewModelFactory
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,8 +34,21 @@ class MainActivity : ComponentActivity() {
 
             NavHost(
                 navController = navController,
-                startDestination = Route.CHAT
+                startDestination = Route.ONBOARDING
             ) {
+                composable(Route.ONBOARDING) {
+                    val onboardingViewModel: OnboardingViewModel = viewModel(
+                        factory = OnboardingViewModelFactory(applicationContext)
+                    )
+                    OnboardingScreen(
+                        viewModel = onboardingViewModel,
+                        onOnboardingComplete = {
+                            navController.navigate(Route.CHAT) {
+                                popUpTo(Route.ONBOARDING) { inclusive = true }
+                            }
+                        }
+                    )
+                }
                 composable(Route.CHAT) {
                     ChatScreen(viewModel = chatViewModel, navController = navController)
                 }
