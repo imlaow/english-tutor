@@ -8,10 +8,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.data.local.AppDatabase
 import com.example.ui.ChatScreen
 import com.example.ui.ChatViewModel
 import com.example.ui.HistoryScreen
@@ -29,12 +32,24 @@ class MainActivity : ComponentActivity() {
     setContent {
       MyApplicationTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            // null while the local DB read is in flight, then true/false.
+            val hasProfile by produceState<Boolean?>(initialValue = null) {
+                value = AppDatabase.getInstance(applicationContext)
+                    .userDao()
+                    .getUserProfile() != null
+            }
+            val startDestination = when (hasProfile) {
+                null -> return@Surface
+                true -> Route.CHAT
+                false -> Route.ONBOARDING
+            }
+
             val navController = rememberNavController()
             val chatViewModel: ChatViewModel = viewModel()
 
             NavHost(
                 navController = navController,
-                startDestination = Route.ONBOARDING
+                startDestination = startDestination
             ) {
                 composable(Route.ONBOARDING) {
                     val onboardingViewModel: OnboardingViewModel = viewModel(

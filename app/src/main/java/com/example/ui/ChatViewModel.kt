@@ -29,13 +29,7 @@ class ChatViewModel : ViewModel() {
     private val _speakEvent = MutableStateFlow<String?>(null)
     val speakEvent: StateFlow<String?> = _speakEvent
 
-    private val _history = MutableStateFlow<List<ChatMessage>>(listOf(
-        ChatMessage(
-            userText = "Hello, I wants to learn English.",
-            aiResponse = "Hello! It's great that you want to learn English. I can help you with that.",
-            grammarCorrection = "I want to learn English."
-        )
-    ))
+    private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
     val history: StateFlow<List<ChatMessage>> = _history
 
     fun setRecordingState(isRecording: Boolean) {
