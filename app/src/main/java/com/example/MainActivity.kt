@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.data.local.AppDatabase
 import com.example.ui.ChatScreen
 import com.example.ui.ChatViewModel
+import com.example.ui.ChatViewModelFactory
 import com.example.ui.HistoryScreen
 import com.example.ui.OnboardingScreen
 import com.example.ui.Route
@@ -45,7 +46,9 @@ class MainActivity : ComponentActivity() {
             }
 
             val navController = rememberNavController()
-            val chatViewModel: ChatViewModel = viewModel()
+            val chatViewModel: ChatViewModel = viewModel(
+                factory = ChatViewModelFactory(applicationContext)
+            )
 
             NavHost(
                 navController = navController,

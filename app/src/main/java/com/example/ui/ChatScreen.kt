@@ -114,6 +114,12 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
         speechRecognizer.setRecognitionListener(recognitionListener)
     }
 
+    // Once the processed message lands in history, hand rendering over from the
+    // interim recognized text to the message (user bubble + AI response).
+    LaunchedEffect(history) {
+        if (history.isNotEmpty()) recognizedText = ""
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
