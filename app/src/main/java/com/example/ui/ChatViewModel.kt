@@ -5,12 +5,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
+import com.example.data.local.ChatMessageEntity
 import com.example.data.local.UserProfileEntity
 import com.example.data.remote.GeminiApiService
+import com.example.data.repository.ChatRepository
 import com.example.data.repository.ProfileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -22,8 +27,25 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis()
 )
 
+private fun ChatMessage.toEntity() = ChatMessageEntity(
+    id = id,
+    userText = userText,
+    aiResponse = aiResponse,
+    grammarCorrection = grammarCorrection,
+    timestamp = timestamp
+)
+
+private fun ChatMessageEntity.toChatMessage() = ChatMessage(
+    id = id,
+    userText = userText,
+    aiResponse = aiResponse,
+    grammarCorrection = grammarCorrection,
+    timestamp = timestamp
+)
+
 class ChatViewModel(
     private val profileRepository: ProfileRepository,
+    private val chatRepository: ChatRepository,
     private val geminiApiService: GeminiApiService
 ) : ViewModel() {
 
@@ -39,8 +61,15 @@ class ChatViewModel(
     private val _speakEvent = MutableStateFlow<String?>(null)
     val speakEvent: StateFlow<String?> = _speakEvent
 
-    private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val history: StateFlow<List<ChatMessage>> = _history
+    // Backed by Room so the conversation survives the app process being killed.
+    val history: StateFlow<List<ChatMessage>> =
+        chatRepository.observeHistory()
+            .map { entities -> entities.map { it.toChatMessage() } }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = emptyList()
+            )
 
     fun setRecordingState(isRecording: Boolean) {
         _isRecording.value = isRecording
@@ -61,12 +90,12 @@ class ChatViewModel(
                 val profile = profileRepository.getUserProfile()
                 val rawJson = geminiApiService.generateContent(
                     systemPrompt = buildSystemPrompt(profile),
-                    userPrompt = buildUserPrompt(_history.value, userText),
+                    userPrompt = buildUserPrompt(history.value, userText),
                     responseMimeType = "application/json"
                 )
                 val message = parseTutorReply(userText, rawJson)
 
-                _history.value = _history.value + message
+                chatRepository.saveMessage(message.toEntity())
                 _speakEvent.value = message.aiResponse
                 _isProcessing.value = false
             } catch (e: CancellationException) {
@@ -140,6 +169,7 @@ class ChatViewModel(
  */
 class ChatViewModelFactory(
     private val profileRepository: ProfileRepository,
+    private val chatRepository: ChatRepository,
     private val geminiApiService: GeminiApiService
 ) : ViewModelProvider.Factory {
 
@@ -147,6 +177,9 @@ class ChatViewModelFactory(
         profileRepository = ProfileRepository(
             userDao = AppDatabase.getInstance(context).userDao(),
             geminiApiService = GeminiApiService()
+        ),
+        chatRepository = ChatRepository(
+            chatMessageDao = AppDatabase.getInstance(context).chatMessageDao()
         ),
         geminiApiService = GeminiApiService()
     )
@@ -156,6 +189,6 @@ class ChatViewModelFactory(
             "ChatViewModelFactory cannot create ${modelClass.name}"
         }
         @Suppress("UNCHECKED_CAST")
-        return ChatViewModel(profileRepository, geminiApiService) as T
+        return ChatViewModel(profileRepository, chatRepository, geminiApiService) as T
     }
 }
