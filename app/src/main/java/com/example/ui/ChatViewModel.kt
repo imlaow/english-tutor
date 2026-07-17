@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -71,6 +72,25 @@ class ChatViewModel(
                 initialValue = emptyList()
             )
 
+    private val _sessionStart = MutableStateFlow(0L)
+
+    // Messages belonging to the current practice session. Older messages stay
+    // in Room (and on the history screen); they just no longer feed the
+    // on-screen conversation or the prompt context.
+    val sessionHistory: StateFlow<List<ChatMessage>> =
+        combine(history, _sessionStart) { messages, sessionStart ->
+            messages.filter { it.timestamp >= sessionStart }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList()
+        )
+
+    fun startNewSession() {
+        _sessionStart.value = System.currentTimeMillis()
+        _error.value = null
+    }
+
     fun setRecordingState(isRecording: Boolean) {
         _isRecording.value = isRecording
     }
@@ -90,7 +110,7 @@ class ChatViewModel(
                 val profile = profileRepository.getUserProfile()
                 val rawJson = geminiApiService.generateContent(
                     systemPrompt = buildSystemPrompt(profile),
-                    userPrompt = buildUserPrompt(history.value, userText),
+                    userPrompt = buildUserPrompt(sessionHistory.value, userText),
                     responseMimeType = "application/json"
                 )
                 val message = parseTutorReply(userText, rawJson)

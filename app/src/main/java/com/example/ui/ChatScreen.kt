@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
@@ -45,7 +46,7 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
     val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     val speakEvent by viewModel.speakEvent.collectAsStateWithLifecycle()
-    val history by viewModel.history.collectAsStateWithLifecycle(emptyList())
+    val history by viewModel.sessionHistory.collectAsStateWithLifecycle(emptyList())
 
     val recordAudioPermission = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
 
@@ -125,6 +126,16 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
             TopAppBar(
                 title = { Text("English Tutor", fontWeight = FontWeight.Bold) },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            recognizedText = ""
+                            recognitionError = null
+                            viewModel.startNewSession()
+                        },
+                        modifier = Modifier.testTag("new_session_button")
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "New session")
+                    }
                     IconButton(onClick = { navController.navigate(Route.HISTORY) }) {
                         Icon(Icons.Default.History, contentDescription = "History")
                     }
