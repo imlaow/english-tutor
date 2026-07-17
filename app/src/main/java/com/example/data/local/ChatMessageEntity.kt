@@ -10,6 +10,10 @@ data class ChatMessageEntity(
     @ColumnInfo(name = "id")
     val id: String,
 
+    // Messages saved before schema v3 all carry the "legacy" session id.
+    @ColumnInfo(name = "session_id", defaultValue = "legacy")
+    val sessionId: String,
+
     @ColumnInfo(name = "user_text")
     val userText: String,
 

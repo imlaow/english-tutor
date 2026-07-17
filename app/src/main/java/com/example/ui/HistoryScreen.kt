@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -20,6 +21,10 @@ import java.util.*
 @Composable
 fun HistoryScreen(viewModel: ChatViewModel, navController: NavController) {
     val history by viewModel.history.collectAsStateWithLifecycle(emptyList())
+
+    // One entry per conversation, newest first. groupBy keeps the oldest-first
+    // message order inside each conversation.
+    val conversations = history.groupBy { it.sessionId }.values.toList().asReversed()
 
     val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.US)
 
@@ -60,44 +65,50 @@ fun HistoryScreen(viewModel: ChatViewModel, navController: NavController) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(history.asReversed()) { message ->
+                items(conversations, key = { it.first().sessionId }) { conversation ->
+                    val firstMessage = conversation.first()
+                    val lastMessage = conversation.last()
                     Card(
+                        onClick = {
+                            viewModel.resumeSession(firstMessage.sessionId)
+                            navController.popBackStack()
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = dateFormat.format(Date(message.timestamp)),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = dateFormat.format(Date(firstMessage.timestamp)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = if (conversation.size == 1) "1 exchange" else "${conversation.size} exchanges",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "You: ${message.userText}",
+                                text = "You: ${firstMessage.userText}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Tutor: ${message.aiResponse}",
-                                style = MaterialTheme.typography.bodyMedium
+                                text = "Tutor: ${lastMessage.aiResponse}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            if (!message.grammarCorrection.isNullOrEmpty()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Surface(
-                                    color = MaterialTheme.colorScheme.errorContainer,
-                                    shape = MaterialTheme.shapes.small
-                                ) {
-                                    Text(
-                                        text = "Grammar: ${message.grammarCorrection}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onErrorContainer,
-                                        modifier = Modifier.padding(8.dp)
-                                    )
-                                }
-                            }
                         }
                     }
                 }

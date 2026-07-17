@@ -22,6 +22,7 @@ import org.json.JSONObject
 
 data class ChatMessage(
     val id: String = java.util.UUID.randomUUID().toString(),
+    val sessionId: String,
     val userText: String,
     val aiResponse: String,
     val grammarCorrection: String?,
@@ -30,6 +31,7 @@ data class ChatMessage(
 
 private fun ChatMessage.toEntity() = ChatMessageEntity(
     id = id,
+    sessionId = sessionId,
     userText = userText,
     aiResponse = aiResponse,
     grammarCorrection = grammarCorrection,
@@ -38,6 +40,7 @@ private fun ChatMessage.toEntity() = ChatMessageEntity(
 
 private fun ChatMessageEntity.toChatMessage() = ChatMessage(
     id = id,
+    sessionId = sessionId,
     userText = userText,
     aiResponse = aiResponse,
     grammarCorrection = grammarCorrection,
@@ -72,14 +75,18 @@ class ChatViewModel(
                 initialValue = emptyList()
             )
 
-    private val _sessionStart = MutableStateFlow(0L)
+    // Null until the user starts or resumes a session; while null the most
+    // recent stored conversation is treated as current, so relaunching the app
+    // picks up where the learner left off.
+    private val _currentSessionId = MutableStateFlow<String?>(null)
 
     // Messages belonging to the current practice session. Older messages stay
     // in Room (and on the history screen); they just no longer feed the
     // on-screen conversation or the prompt context.
     val sessionHistory: StateFlow<List<ChatMessage>> =
-        combine(history, _sessionStart) { messages, sessionStart ->
-            messages.filter { it.timestamp >= sessionStart }
+        combine(history, _currentSessionId) { messages, currentId ->
+            val sessionId = currentId ?: messages.lastOrNull()?.sessionId
+            messages.filter { it.sessionId == sessionId }
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -87,7 +94,12 @@ class ChatViewModel(
         )
 
     fun startNewSession() {
-        _sessionStart.value = System.currentTimeMillis()
+        _currentSessionId.value = java.util.UUID.randomUUID().toString()
+        _error.value = null
+    }
+
+    fun resumeSession(sessionId: String) {
+        _currentSessionId.value = sessionId
         _error.value = null
     }
 
@@ -105,6 +117,13 @@ class ChatViewModel(
         _isProcessing.value = true
         _error.value = null
 
+        // Pin down the session the reply belongs to before the network call, so a
+        // session switch mid-request can't reassign the message.
+        val sessionId = _currentSessionId.value
+            ?: history.value.lastOrNull()?.sessionId
+            ?: java.util.UUID.randomUUID().toString()
+        _currentSessionId.value = sessionId
+
         viewModelScope.launch {
             try {
                 val profile = profileRepository.getUserProfile()
@@ -113,7 +132,7 @@ class ChatViewModel(
                     userPrompt = buildUserPrompt(sessionHistory.value, userText),
                     responseMimeType = "application/json"
                 )
-                val message = parseTutorReply(userText, rawJson)
+                val message = parseTutorReply(sessionId, userText, rawJson)
 
                 chatRepository.saveMessage(message.toEntity())
                 _speakEvent.value = message.aiResponse
@@ -158,7 +177,7 @@ class ChatViewModel(
         }
     }
 
-    private fun parseTutorReply(userText: String, rawJson: String): ChatMessage {
+    private fun parseTutorReply(sessionId: String, userText: String, rawJson: String): ChatMessage {
         // Defensive cleanup in case the model wraps the JSON in a markdown fence.
         val cleaned = rawJson.trim()
             .removePrefix("```json")
@@ -173,6 +192,7 @@ class ChatViewModel(
                 .takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
         }
         return ChatMessage(
+            sessionId = sessionId,
             userText = userText,
             aiResponse = json.getString("ai_response"),
             grammarCorrection = correction
