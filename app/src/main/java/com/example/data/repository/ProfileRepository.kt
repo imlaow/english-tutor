@@ -2,13 +2,13 @@ package com.example.data.repository
 
 import com.example.data.local.UserDao
 import com.example.data.local.UserProfileEntity
-import com.example.data.remote.GeminiApiService
+import com.example.data.remote.AiModelService
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONObject
 
 class ProfileRepository(
     private val userDao: UserDao,
-    private val geminiApiService: GeminiApiService
+    private val apiService: AiModelService
 ) {
 
     suspend fun saveUserProfile(profile: UserProfileEntity) =
@@ -31,7 +31,7 @@ class ProfileRepository(
         systemPrompt: String,
         onboardingAnswers: String
     ): UserProfileEntity {
-        val rawJson = geminiApiService.generateContent(
+        val rawJson = apiService.generateContent(
             systemPrompt = systemPrompt,
             userPrompt = onboardingAnswers,
             responseMimeType = "application/json"

@@ -21,6 +21,7 @@ import com.example.ui.ChatViewModelFactory
 import com.example.ui.HistoryScreen
 import com.example.ui.OnboardingScreen
 import com.example.ui.Route
+import com.example.ui.SettingsScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.OnboardingViewModel
 import com.example.viewmodel.OnboardingViewModelFactory
@@ -72,6 +73,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Route.HISTORY) {
                     HistoryScreen(viewModel = chatViewModel, navController = navController)
+                }
+                composable(Route.SETTINGS) {
+                    SettingsScreen(navController = navController)
                 }
             }
         }

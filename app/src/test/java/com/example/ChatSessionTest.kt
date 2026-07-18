@@ -63,10 +63,10 @@ class ChatSessionTest {
     private fun createViewModel() = ChatViewModel(
         profileRepository = ProfileRepository(
             userDao = db.userDao(),
-            geminiApiService = GeminiApiService(apiKey = "test-key")
+            apiService = GeminiApiService(apiKey = "test-key")
         ),
         chatRepository = ChatRepository(chatMessageDao = db.chatMessageDao()),
-        geminiApiService = GeminiApiService(apiKey = "test-key")
+        apiService = GeminiApiService(apiKey = "test-key")
     )
 
     @Test

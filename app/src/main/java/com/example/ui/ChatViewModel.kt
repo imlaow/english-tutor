@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.local.ChatMessageEntity
 import com.example.data.local.UserProfileEntity
-import com.example.data.remote.GeminiApiService
+import com.example.data.remote.AiModelService
+import com.example.data.remote.ConfigurableAiService
+import com.example.data.settings.SettingsRepository
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.ProfileRepository
 import kotlinx.coroutines.CancellationException
@@ -50,7 +52,7 @@ private fun ChatMessageEntity.toChatMessage() = ChatMessage(
 class ChatViewModel(
     private val profileRepository: ProfileRepository,
     private val chatRepository: ChatRepository,
-    private val geminiApiService: GeminiApiService
+    private val apiService: AiModelService
 ) : ViewModel() {
 
     private val _isRecording = MutableStateFlow(false)
@@ -127,7 +129,7 @@ class ChatViewModel(
         viewModelScope.launch {
             try {
                 val profile = profileRepository.getUserProfile()
-                val rawJson = geminiApiService.generateContent(
+                val rawJson = apiService.generateContent(
                     systemPrompt = buildSystemPrompt(profile),
                     userPrompt = buildUserPrompt(sessionHistory.value, userText),
                     responseMimeType = "application/json"
@@ -210,18 +212,18 @@ class ChatViewModel(
 class ChatViewModelFactory(
     private val profileRepository: ProfileRepository,
     private val chatRepository: ChatRepository,
-    private val geminiApiService: GeminiApiService
+    private val apiService: AiModelService
 ) : ViewModelProvider.Factory {
 
     constructor(context: Context) : this(
         profileRepository = ProfileRepository(
             userDao = AppDatabase.getInstance(context).userDao(),
-            geminiApiService = GeminiApiService()
+            apiService = ConfigurableAiService(SettingsRepository.getInstance(context))
         ),
         chatRepository = ChatRepository(
             chatMessageDao = AppDatabase.getInstance(context).chatMessageDao()
         ),
-        geminiApiService = GeminiApiService()
+        apiService = ConfigurableAiService(SettingsRepository.getInstance(context))
     )
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -229,6 +231,6 @@ class ChatViewModelFactory(
             "ChatViewModelFactory cannot create ${modelClass.name}"
         }
         @Suppress("UNCHECKED_CAST")
-        return ChatViewModel(profileRepository, chatRepository, geminiApiService) as T
+        return ChatViewModel(profileRepository, chatRepository, apiService) as T
     }
 }

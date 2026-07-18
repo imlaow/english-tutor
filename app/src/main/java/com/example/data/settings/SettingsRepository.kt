@@ -1,0 +1,86 @@
+package com.example.data.settings
+
+import android.content.Context
+import com.example.data.remote.GeminiApiService
+import com.example.data.remote.OpenAiApiService
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+enum class ApiProvider { GEMINI, OPENAI }
+
+/**
+ * User-configurable model API settings. Each provider keeps its own base URL,
+ * API key and model so switching providers doesn't lose the other's values.
+ * A blank Gemini API key means "use the key bundled at build time".
+ */
+data class ModelApiSettings(
+    val provider: ApiProvider = ApiProvider.GEMINI,
+    val geminiBaseUrl: String = GeminiApiService.DEFAULT_BASE_URL,
+    val geminiApiKey: String = "",
+    val geminiModel: String = GeminiApiService.DEFAULT_MODEL,
+    val openAiBaseUrl: String = OpenAiApiService.DEFAULT_BASE_URL,
+    val openAiApiKey: String = "",
+    val openAiModel: String = OpenAiApiService.DEFAULT_MODEL
+)
+
+/**
+ * Persists [ModelApiSettings] in SharedPreferences and exposes them as a
+ * StateFlow so API calls always see the latest configuration.
+ */
+class SettingsRepository private constructor(context: Context) {
+
+    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    private val _settings = MutableStateFlow(load())
+    val settings: StateFlow<ModelApiSettings> = _settings.asStateFlow()
+
+    fun save(settings: ModelApiSettings) {
+        prefs.edit()
+            .putString(KEY_PROVIDER, settings.provider.name)
+            .putString(KEY_GEMINI_BASE_URL, settings.geminiBaseUrl)
+            .putString(KEY_GEMINI_API_KEY, settings.geminiApiKey)
+            .putString(KEY_GEMINI_MODEL, settings.geminiModel)
+            .putString(KEY_OPENAI_BASE_URL, settings.openAiBaseUrl)
+            .putString(KEY_OPENAI_API_KEY, settings.openAiApiKey)
+            .putString(KEY_OPENAI_MODEL, settings.openAiModel)
+            .apply()
+        _settings.value = settings
+    }
+
+    private fun load(): ModelApiSettings {
+        val defaults = ModelApiSettings()
+        fun read(key: String, default: String): String =
+            prefs.getString(key, null)?.takeIf { it.isNotBlank() } ?: default
+        return ModelApiSettings(
+            provider = prefs.getString(KEY_PROVIDER, null)
+                ?.let { name -> ApiProvider.entries.firstOrNull { it.name == name } }
+                ?: defaults.provider,
+            geminiBaseUrl = read(KEY_GEMINI_BASE_URL, defaults.geminiBaseUrl),
+            geminiApiKey = prefs.getString(KEY_GEMINI_API_KEY, null) ?: defaults.geminiApiKey,
+            geminiModel = read(KEY_GEMINI_MODEL, defaults.geminiModel),
+            openAiBaseUrl = read(KEY_OPENAI_BASE_URL, defaults.openAiBaseUrl),
+            openAiApiKey = prefs.getString(KEY_OPENAI_API_KEY, null) ?: defaults.openAiApiKey,
+            openAiModel = read(KEY_OPENAI_MODEL, defaults.openAiModel)
+        )
+    }
+
+    companion object {
+        private const val PREFS_NAME = "model_api_settings"
+        private const val KEY_PROVIDER = "provider"
+        private const val KEY_GEMINI_BASE_URL = "gemini_base_url"
+        private const val KEY_GEMINI_API_KEY = "gemini_api_key"
+        private const val KEY_GEMINI_MODEL = "gemini_model"
+        private const val KEY_OPENAI_BASE_URL = "openai_base_url"
+        private const val KEY_OPENAI_API_KEY = "openai_api_key"
+        private const val KEY_OPENAI_MODEL = "openai_model"
+
+        @Volatile
+        private var instance: SettingsRepository? = null
+
+        fun getInstance(context: Context): SettingsRepository =
+            instance ?: synchronized(this) {
+                instance ?: SettingsRepository(context.applicationContext).also { instance = it }
+            }
+    }
+}
