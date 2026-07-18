@@ -38,6 +38,8 @@ robolectric = "4.16.1"
 roborazzi = "1.59.0"
 firebaseBom = "34.12.0"
 secretsGradlePlugin = "2.0.1"
+# 1.44.0+ pulls in com.azure:azure-core, which needs minSdk 26 (app minSdk is 24).
+azureSpeechSdk = "1.43.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -86,6 +88,7 @@ roborazzi = { group = "io.github.takahirom.roborazzi", name = "roborazzi", versi
 roborazzi-compose = { group = "io.github.takahirom.roborazzi", name = "roborazzi-compose", version.ref = "roborazzi" }
 roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "roborazzi-junit-rule", version.ref = "roborazzi" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+azure-speech-sdk = { group = "com.microsoft.cognitiveservices.speech", name = "client-sdk", version.ref = "azureSpeechSdk" }
 firebase-ai = { group = "com.google.firebase", name = "firebase-ai" }
 
 [plugins]

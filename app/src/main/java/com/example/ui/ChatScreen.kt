@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.manager.TtsManager
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -54,27 +54,16 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
     var recognizedText by remember { mutableStateOf("") }
     var recognitionError by remember { mutableStateOf<String?>(null) }
 
-    val tts = remember {
-        var textToSpeech: TextToSpeech? = null
-        textToSpeech = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                textToSpeech?.language = Locale.US
-            }
-        }
-        textToSpeech
-    }
-
     DisposableEffect(Unit) {
         onDispose {
             speechRecognizer.destroy()
-            tts.stop()
-            tts.shutdown()
+            TtsManager.stop()
         }
     }
 
     LaunchedEffect(speakEvent) {
         speakEvent?.let {
-            tts.speak(it, TextToSpeech.QUEUE_FLUSH, null, null)
+            TtsManager.speak(it)
             viewModel.clearSpeakEvent()
         }
     }
