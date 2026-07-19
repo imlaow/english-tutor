@@ -37,6 +37,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.data.remote.GeminiApiService
+import com.example.data.remote.OpenAiApiService
 import com.example.data.settings.ApiProvider
 import com.example.data.settings.ModelApiSettings
 import com.example.data.settings.SettingsRepository
@@ -110,6 +112,8 @@ fun SettingsScreen(navController: NavController) {
                         value = draft.geminiBaseUrl,
                         onValueChange = { draft = draft.copy(geminiBaseUrl = it) },
                         label = { Text("Base URL") },
+                        placeholder = { Text(GeminiApiService.DEFAULT_BASE_URL) },
+                        supportingText = { Text("Leave empty to use the default.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -125,6 +129,8 @@ fun SettingsScreen(navController: NavController) {
                         value = draft.geminiModel,
                         onValueChange = { draft = draft.copy(geminiModel = it) },
                         label = { Text("Model") },
+                        placeholder = { Text(GeminiApiService.DEFAULT_MODEL) },
+                        supportingText = { Text("Leave empty to use the default.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -134,7 +140,8 @@ fun SettingsScreen(navController: NavController) {
                         value = draft.openAiBaseUrl,
                         onValueChange = { draft = draft.copy(openAiBaseUrl = it) },
                         label = { Text("Base URL") },
-                        supportingText = { Text("Any OpenAI-compatible endpoint works.") },
+                        placeholder = { Text(OpenAiApiService.DEFAULT_BASE_URL) },
+                        supportingText = { Text("Leave empty to use the default. Any OpenAI-compatible endpoint works.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -149,6 +156,8 @@ fun SettingsScreen(navController: NavController) {
                         value = draft.openAiModel,
                         onValueChange = { draft = draft.copy(openAiModel = it) },
                         label = { Text("Model") },
+                        placeholder = { Text(OpenAiApiService.DEFAULT_MODEL) },
+                        supportingText = { Text("Leave empty to use the default.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -176,15 +185,12 @@ fun SettingsScreen(navController: NavController) {
     }
 }
 
-/** Trims whitespace and falls back to defaults for blank URL/model fields. */
-private fun normalized(draft: ModelApiSettings): ModelApiSettings {
-    val defaults = ModelApiSettings()
-    return draft.copy(
-        geminiBaseUrl = draft.geminiBaseUrl.trim().ifBlank { defaults.geminiBaseUrl },
-        geminiApiKey = draft.geminiApiKey.trim(),
-        geminiModel = draft.geminiModel.trim().ifBlank { defaults.geminiModel },
-        openAiBaseUrl = draft.openAiBaseUrl.trim().ifBlank { defaults.openAiBaseUrl },
-        openAiApiKey = draft.openAiApiKey.trim(),
-        openAiModel = draft.openAiModel.trim().ifBlank { defaults.openAiModel }
-    )
-}
+/** Trims stray whitespace; empty fields stay empty and fall back to defaults at request time. */
+private fun normalized(draft: ModelApiSettings): ModelApiSettings = draft.copy(
+    geminiBaseUrl = draft.geminiBaseUrl.trim(),
+    geminiApiKey = draft.geminiApiKey.trim(),
+    geminiModel = draft.geminiModel.trim(),
+    openAiBaseUrl = draft.openAiBaseUrl.trim(),
+    openAiApiKey = draft.openAiApiKey.trim(),
+    openAiModel = draft.openAiModel.trim()
+)

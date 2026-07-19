@@ -1,8 +1,6 @@
 package com.example.data.settings
 
 import android.content.Context
-import com.example.data.remote.GeminiApiService
-import com.example.data.remote.OpenAiApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,16 +10,17 @@ enum class ApiProvider { GEMINI, OPENAI }
 /**
  * User-configurable model API settings. Each provider keeps its own base URL,
  * API key and model so switching providers doesn't lose the other's values.
- * A blank Gemini API key means "use the key bundled at build time".
+ * Blank base URL and model mean "use the provider's default"; a blank Gemini
+ * API key means "use the key bundled at build time".
  */
 data class ModelApiSettings(
     val provider: ApiProvider = ApiProvider.GEMINI,
-    val geminiBaseUrl: String = GeminiApiService.DEFAULT_BASE_URL,
+    val geminiBaseUrl: String = "",
     val geminiApiKey: String = "",
-    val geminiModel: String = GeminiApiService.DEFAULT_MODEL,
-    val openAiBaseUrl: String = OpenAiApiService.DEFAULT_BASE_URL,
+    val geminiModel: String = "",
+    val openAiBaseUrl: String = "",
     val openAiApiKey: String = "",
-    val openAiModel: String = OpenAiApiService.DEFAULT_MODEL
+    val openAiModel: String = ""
 )
 
 /**
@@ -49,19 +48,17 @@ class SettingsRepository private constructor(context: Context) {
     }
 
     private fun load(): ModelApiSettings {
-        val defaults = ModelApiSettings()
-        fun read(key: String, default: String): String =
-            prefs.getString(key, null)?.takeIf { it.isNotBlank() } ?: default
+        fun read(key: String): String = prefs.getString(key, null).orEmpty()
         return ModelApiSettings(
             provider = prefs.getString(KEY_PROVIDER, null)
                 ?.let { name -> ApiProvider.entries.firstOrNull { it.name == name } }
-                ?: defaults.provider,
-            geminiBaseUrl = read(KEY_GEMINI_BASE_URL, defaults.geminiBaseUrl),
-            geminiApiKey = prefs.getString(KEY_GEMINI_API_KEY, null) ?: defaults.geminiApiKey,
-            geminiModel = read(KEY_GEMINI_MODEL, defaults.geminiModel),
-            openAiBaseUrl = read(KEY_OPENAI_BASE_URL, defaults.openAiBaseUrl),
-            openAiApiKey = prefs.getString(KEY_OPENAI_API_KEY, null) ?: defaults.openAiApiKey,
-            openAiModel = read(KEY_OPENAI_MODEL, defaults.openAiModel)
+                ?: ApiProvider.GEMINI,
+            geminiBaseUrl = read(KEY_GEMINI_BASE_URL),
+            geminiApiKey = read(KEY_GEMINI_API_KEY),
+            geminiModel = read(KEY_GEMINI_MODEL),
+            openAiBaseUrl = read(KEY_OPENAI_BASE_URL),
+            openAiApiKey = read(KEY_OPENAI_API_KEY),
+            openAiModel = read(KEY_OPENAI_MODEL)
         )
     }
 
