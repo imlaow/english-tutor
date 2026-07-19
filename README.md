@@ -16,6 +16,6 @@ View your app in AI Studio: https://ai.studio/apps/5c04d8fe-5c2d-465a-8c06-dd068
 1. Open Android Studio
 2. Select **Open** and choose the directory containing this project
 3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
+4. Create a file named `.env` in the project directory with your Azure Speech credentials (see `.env.example` for an example). The Gemini/OpenAI API key is not part of the build: enter it in the app's Settings screen instead.
 5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
 6. Run the app on an emulator or physical device

@@ -1,6 +1,5 @@
 package com.example.data.remote
 
-import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -13,7 +12,7 @@ import java.net.URL
  * Uses HttpURLConnection so no extra networking dependencies are required.
  */
 class GeminiApiService(
-    private val apiKey: String = BuildConfig.GEMINI_API_KEY,
+    private val apiKey: String,
     private val model: String = DEFAULT_MODEL,
     baseUrl: String = DEFAULT_BASE_URL
 ) : AiModelService {

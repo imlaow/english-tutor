@@ -13,10 +13,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -45,7 +49,8 @@ private val ENGLISH_LEVELS = listOf(
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel,
-    onOnboardingComplete: () -> Unit
+    onOnboardingComplete: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -65,9 +70,18 @@ fun OnboardingScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Welcome", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(
+                        onClick = onOpenSettings,
+                        modifier = Modifier.testTag("onboarding_settings_button")
+                    ) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
         },

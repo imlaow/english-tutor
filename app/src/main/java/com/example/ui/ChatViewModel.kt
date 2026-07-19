@@ -9,6 +9,7 @@ import com.example.data.local.ChatMessageEntity
 import com.example.data.local.UserProfileEntity
 import com.example.data.remote.AiModelService
 import com.example.data.remote.ConfigurableAiService
+import com.example.data.remote.MissingApiKeyException
 import com.example.data.settings.SettingsRepository
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.ProfileRepository
@@ -141,6 +142,9 @@ class ChatViewModel(
                 _isProcessing.value = false
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: MissingApiKeyException) {
+                _error.value = "Add your API key in Settings (gear icon, top-left) to start chatting."
+                _isProcessing.value = false
             } catch (e: Exception) {
                 _error.value = "Couldn't reach your AI tutor. Please check your connection and try again."
                 _isProcessing.value = false

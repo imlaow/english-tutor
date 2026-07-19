@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.remote.ConfigurableAiService
+import com.example.data.remote.MissingApiKeyException
 import com.example.data.settings.SettingsRepository
 import com.example.data.repository.ProfileRepository
 import kotlinx.coroutines.CancellationException
@@ -55,6 +56,13 @@ class OnboardingViewModel(
                 _uiState.update { it.copy(isGeneratingProfile = false, isProfileSaved = true) }
             } catch (e: CancellationException) {
                 throw e
+            } catch (e: MissingApiKeyException) {
+                _uiState.update {
+                    it.copy(
+                        isGeneratingProfile = false,
+                        errorMessage = "Add your API key first: tap the gear icon at the top right to open Settings."
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(

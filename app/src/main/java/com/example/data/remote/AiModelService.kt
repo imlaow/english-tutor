@@ -18,3 +18,6 @@ interface AiModelService {
 }
 
 class AiApiException(message: String) : Exception(message)
+
+/** Thrown before any network call when the selected provider has no API key configured. */
+class MissingApiKeyException(message: String) : Exception(message)

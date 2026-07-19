@@ -1,6 +1,5 @@
 package com.example.data.remote
 
-import com.example.BuildConfig
 import com.example.data.settings.ApiProvider
 import com.example.data.settings.SettingsRepository
 
@@ -20,16 +19,26 @@ class ConfigurableAiService(
     ): String {
         val settings = settingsRepository.settings.value
         val service = when (settings.provider) {
-            ApiProvider.GEMINI -> GeminiApiService(
-                apiKey = settings.geminiApiKey.ifBlank { BuildConfig.GEMINI_API_KEY },
-                model = settings.geminiModel.ifBlank { GeminiApiService.DEFAULT_MODEL },
-                baseUrl = settings.geminiBaseUrl.ifBlank { GeminiApiService.DEFAULT_BASE_URL }
-            )
-            ApiProvider.OPENAI -> OpenAiApiService(
-                apiKey = settings.openAiApiKey,
-                model = settings.openAiModel.ifBlank { OpenAiApiService.DEFAULT_MODEL },
-                baseUrl = settings.openAiBaseUrl.ifBlank { OpenAiApiService.DEFAULT_BASE_URL }
-            )
+            ApiProvider.GEMINI -> {
+                if (settings.geminiApiKey.isBlank()) {
+                    throw MissingApiKeyException("No Gemini API key configured in Settings.")
+                }
+                GeminiApiService(
+                    apiKey = settings.geminiApiKey,
+                    model = settings.geminiModel.ifBlank { GeminiApiService.DEFAULT_MODEL },
+                    baseUrl = settings.geminiBaseUrl.ifBlank { GeminiApiService.DEFAULT_BASE_URL }
+                )
+            }
+            ApiProvider.OPENAI -> {
+                if (settings.openAiApiKey.isBlank()) {
+                    throw MissingApiKeyException("No OpenAI API key configured in Settings.")
+                }
+                OpenAiApiService(
+                    apiKey = settings.openAiApiKey,
+                    model = settings.openAiModel.ifBlank { OpenAiApiService.DEFAULT_MODEL },
+                    baseUrl = settings.openAiBaseUrl.ifBlank { OpenAiApiService.DEFAULT_BASE_URL }
+                )
+            }
         }
         return service.generateContent(systemPrompt, userPrompt, responseMimeType)
     }

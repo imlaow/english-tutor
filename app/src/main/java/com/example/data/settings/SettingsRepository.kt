@@ -10,8 +10,8 @@ enum class ApiProvider { GEMINI, OPENAI }
 /**
  * User-configurable model API settings. Each provider keeps its own base URL,
  * API key and model so switching providers doesn't lose the other's values.
- * Blank base URL and model mean "use the provider's default"; a blank Gemini
- * API key means "use the key bundled at build time".
+ * Blank base URL and model mean "use the provider's default"; the API key has
+ * no fallback and must be entered before the provider can be used.
  */
 data class ModelApiSettings(
     val provider: ApiProvider = ApiProvider.GEMINI,

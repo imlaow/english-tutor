@@ -121,7 +121,7 @@ fun SettingsScreen(navController: NavController) {
                         value = draft.geminiApiKey,
                         onValueChange = { draft = draft.copy(geminiApiKey = it) },
                         label = { Text("API key") },
-                        supportingText = { Text("Leave empty to use the app's built-in key.") },
+                        supportingText = { Text("Required for the Gemini API.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

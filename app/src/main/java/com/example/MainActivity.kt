@@ -65,7 +65,8 @@ class MainActivity : ComponentActivity() {
                             navController.navigate(Route.CHAT) {
                                 popUpTo(Route.ONBOARDING) { inclusive = true }
                             }
-                        }
+                        },
+                        onOpenSettings = { navController.navigate(Route.SETTINGS) }
                     )
                 }
                 composable(Route.CHAT) {
