@@ -117,7 +117,7 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
                 title = { Text("English Tutor", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(
-                        onClick = { navController.navigate(Route.SETTINGS) },
+                        onClick = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } },
                         modifier = Modifier.testTag("settings_button")
                     ) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
@@ -134,7 +134,7 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "New session")
                     }
-                    IconButton(onClick = { navController.navigate(Route.HISTORY) }) {
+                    IconButton(onClick = { navController.navigate(Route.HISTORY) { launchSingleTop = true } }) {
                         Icon(Icons.Default.History, contentDescription = "History")
                     }
                 },

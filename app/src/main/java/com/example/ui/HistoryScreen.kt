@@ -33,7 +33,7 @@ fun HistoryScreen(viewModel: ChatViewModel, navController: NavController) {
             TopAppBar(
                 title = { Text("Practice History") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.safePopBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -71,7 +71,7 @@ fun HistoryScreen(viewModel: ChatViewModel, navController: NavController) {
                     Card(
                         onClick = {
                             viewModel.resumeSession(firstMessage.sessionId)
-                            navController.popBackStack()
+                            navController.safePopBackStack()
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(

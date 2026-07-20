@@ -58,7 +58,7 @@ fun ApiSettingsScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("API configuration", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.safePopBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },

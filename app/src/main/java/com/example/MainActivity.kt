@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
                                 popUpTo(Route.ONBOARDING) { inclusive = true }
                             }
                         },
-                        onOpenSettings = { navController.navigate(Route.SETTINGS) }
+                        onOpenSettings = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } }
                     )
                 }
                 composable(Route.CHAT) {

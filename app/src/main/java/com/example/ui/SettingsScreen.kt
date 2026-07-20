@@ -50,7 +50,7 @@ fun SettingsScreen(navController: NavController) {
             TopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    IconButton(onClick = { navController.safePopBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -75,7 +75,7 @@ fun SettingsScreen(navController: NavController) {
                     ApiProvider.OPENAI -> "OpenAI"
                 },
                 icon = Icons.Filled.Cloud,
-                onClick = { navController.navigate(Route.API_SETTINGS) },
+                onClick = { navController.navigate(Route.API_SETTINGS) { launchSingleTop = true } },
                 modifier = Modifier.testTag("settings_api_configuration")
             )
         }
