@@ -15,4 +15,10 @@ interface ChatMessageDao {
     // Oldest-first, matching the in-conversation ordering the UI expects.
     @Query("SELECT * FROM chat_message ORDER BY timestamp ASC")
     fun observeAll(): Flow<List<ChatMessageEntity>>
+
+    @Query("DELETE FROM chat_message WHERE session_id = :sessionId")
+    suspend fun deleteBySessionId(sessionId: String)
+
+    @Query("DELETE FROM chat_message")
+    suspend fun deleteAll()
 }

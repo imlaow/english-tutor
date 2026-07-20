@@ -13,4 +13,10 @@ class ChatRepository(
 
     suspend fun saveMessage(message: ChatMessageEntity) =
         chatMessageDao.insert(message)
+
+    suspend fun deleteSession(sessionId: String) =
+        chatMessageDao.deleteBySessionId(sessionId)
+
+    suspend fun clearHistory() =
+        chatMessageDao.deleteAll()
 }

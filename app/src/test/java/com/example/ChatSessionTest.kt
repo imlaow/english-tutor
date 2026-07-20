@@ -93,6 +93,54 @@ class ChatSessionTest {
     }
 
     @Test
+    fun `deleting a session removes only that conversation from history`() = runBlocking {
+        val dao = db.chatMessageDao()
+        dao.insert(message("a1", sessionId = "session-a", timestamp = 1_000L))
+        dao.insert(message("a2", sessionId = "session-a", timestamp = 2_000L))
+        dao.insert(message("b1", sessionId = "session-b", timestamp = 3_000L))
+
+        val viewModel = createViewModel()
+        withTimeout(5_000L) { viewModel.history.first { it.size == 3 } }
+
+        viewModel.deleteSession("session-a")
+        val remaining = withTimeout(5_000L) { viewModel.history.first { it.size == 1 } }
+        assertEquals(listOf("b1"), remaining.map { it.id })
+    }
+
+    @Test
+    fun `deleting the current session starts a fresh conversation`() = runBlocking {
+        val dao = db.chatMessageDao()
+        dao.insert(message("a1", sessionId = "session-a", timestamp = 1_000L))
+        dao.insert(message("b1", sessionId = "session-b", timestamp = 2_000L))
+
+        val viewModel = createViewModel()
+        // session-b is the implicit current conversation (most recent).
+        withTimeout(5_000L) { viewModel.sessionHistory.first { it.map { m -> m.id } == listOf("b1") } }
+
+        viewModel.deleteSession("session-b")
+
+        // The chat screen must not silently fall back to session-a.
+        val fresh = withTimeout(5_000L) { viewModel.sessionHistory.first { it.isEmpty() } }
+        assertEquals(emptyList<Any>(), fresh)
+        withTimeout(5_000L) { viewModel.history.first { it.size == 1 } }
+        Unit
+    }
+
+    @Test
+    fun `clearing all history empties every conversation`() = runBlocking {
+        val dao = db.chatMessageDao()
+        dao.insert(message("a1", sessionId = "session-a", timestamp = 1_000L))
+        dao.insert(message("b1", sessionId = "session-b", timestamp = 2_000L))
+
+        val viewModel = createViewModel()
+        withTimeout(5_000L) { viewModel.history.first { it.size == 2 } }
+
+        viewModel.clearAllHistory()
+        val cleared = withTimeout(5_000L) { viewModel.history.first { it.isEmpty() } }
+        assertEquals(emptyList<Any>(), cleared)
+    }
+
+    @Test
     fun `starting a new session clears the on-screen conversation`() = runBlocking {
         val dao = db.chatMessageDao()
         dao.insert(message("a1", sessionId = "session-a", timestamp = 1_000L))

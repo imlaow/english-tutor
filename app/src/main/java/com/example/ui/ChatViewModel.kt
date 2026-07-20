@@ -106,6 +106,26 @@ class ChatViewModel(
         _error.value = null
     }
 
+    fun deleteSession(sessionId: String) {
+        // If the conversation being deleted is the one on screen (explicitly
+        // resumed or the implicit most-recent fallback), start a fresh session
+        // so the chat screen doesn't silently switch to another old one.
+        val effectiveCurrentId = _currentSessionId.value ?: history.value.lastOrNull()?.sessionId
+        if (sessionId == effectiveCurrentId) {
+            startNewSession()
+        }
+        viewModelScope.launch {
+            chatRepository.deleteSession(sessionId)
+        }
+    }
+
+    fun clearAllHistory() {
+        startNewSession()
+        viewModelScope.launch {
+            chatRepository.clearHistory()
+        }
+    }
+
     fun setRecordingState(isRecording: Boolean) {
         _isRecording.value = isRecording
     }
