@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.data.local.AppDatabase
+import com.example.ui.ApiSettingsScreen
 import com.example.ui.ChatScreen
 import com.example.ui.ChatViewModel
 import com.example.ui.ChatViewModelFactory
@@ -77,6 +78,9 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Route.SETTINGS) {
                     SettingsScreen(navController = navController)
+                }
+                composable(Route.API_SETTINGS) {
+                    ApiSettingsScreen(navController = navController)
                 }
             }
         }

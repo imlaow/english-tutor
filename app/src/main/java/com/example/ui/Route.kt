@@ -5,4 +5,5 @@ object Route {
     const val CHAT = "chat"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
+    const val API_SETTINGS = "api_settings"
 }
