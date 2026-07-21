@@ -1,15 +1,15 @@
 package com.example.data.remote
 
-import com.example.data.settings.ApiProvider
-import com.example.data.settings.SettingsRepository
+import com.example.data.repository.ApiProfileRepository
+import com.example.data.settings.ApiSpec
 
 /**
- * [AiModelService] that routes each request to the provider currently selected
+ * [AiModelService] that routes each request to the API profile currently active
  * in the settings screen, so configuration changes take effect immediately
  * without recreating repositories or view models.
  */
 class ConfigurableAiService(
-    private val settingsRepository: SettingsRepository
+    private val apiProfileRepository: ApiProfileRepository
 ) : AiModelService {
 
     override suspend fun generateContent(
@@ -17,28 +17,22 @@ class ConfigurableAiService(
         userPrompt: String,
         responseMimeType: String?
     ): String {
-        val settings = settingsRepository.settings.value
-        val service = when (settings.provider) {
-            ApiProvider.GEMINI -> {
-                if (settings.geminiApiKey.isBlank()) {
-                    throw MissingApiKeyException("No Gemini API key configured in Settings.")
-                }
-                GeminiApiService(
-                    apiKey = settings.geminiApiKey,
-                    model = settings.geminiModel.ifBlank { GeminiApiService.DEFAULT_MODEL },
-                    baseUrl = settings.geminiBaseUrl.ifBlank { GeminiApiService.DEFAULT_BASE_URL }
-                )
-            }
-            ApiProvider.OPENAI -> {
-                if (settings.openAiApiKey.isBlank()) {
-                    throw MissingApiKeyException("No OpenAI API key configured in Settings.")
-                }
-                OpenAiApiService(
-                    apiKey = settings.openAiApiKey,
-                    model = settings.openAiModel.ifBlank { OpenAiApiService.DEFAULT_MODEL },
-                    baseUrl = settings.openAiBaseUrl.ifBlank { OpenAiApiService.DEFAULT_BASE_URL }
-                )
-            }
+        val profile = apiProfileRepository.currentProfile()
+            ?: throw MissingApiKeyException("No API profile configured in Settings.")
+        if (profile.apiKey.isBlank()) {
+            throw MissingApiKeyException("No API key configured for profile \"${profile.name}\".")
+        }
+        val service = when (profile.apiSpec) {
+            ApiSpec.GEMINI -> GeminiApiService(
+                apiKey = profile.apiKey,
+                model = profile.effectiveModel,
+                baseUrl = profile.effectiveBaseUrl
+            )
+            ApiSpec.OPENAI -> OpenAiApiService(
+                apiKey = profile.apiKey,
+                model = profile.effectiveModel,
+                baseUrl = profile.effectiveBaseUrl
+            )
         }
         return service.generateContent(systemPrompt, userPrompt, responseMimeType)
     }

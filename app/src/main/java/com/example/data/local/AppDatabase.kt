@@ -9,8 +9,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [UserProfileEntity::class, ChatMessageEntity::class],
-    version = 3,
+    entities = [UserProfileEntity::class, ChatMessageEntity::class, ApiProfileEntity::class],
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class)
@@ -19,6 +19,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
 
     abstract fun chatMessageDao(): ChatMessageDao
+
+    abstract fun apiProfileDao(): ApiProfileDao
 
     companion object {
 
@@ -51,6 +53,26 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // v4 replaces the single global model API configuration (previously kept in
+        // SharedPreferences) with a list of named profiles. Nothing is carried over:
+        // the table starts empty and the user re-enters their API key once.
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `api_profile` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`api_spec` TEXT NOT NULL, " +
+                        "`base_url` TEXT NOT NULL, " +
+                        "`api_key` TEXT NOT NULL, " +
+                        "`model` TEXT NOT NULL, " +
+                        "`enabled` INTEGER NOT NULL, " +
+                        "`sort_order` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -60,7 +82,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .build()
+                    .also { instance = it }
             }
     }
 }

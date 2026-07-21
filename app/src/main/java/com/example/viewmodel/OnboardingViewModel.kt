@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.remote.ConfigurableAiService
 import com.example.data.remote.MissingApiKeyException
-import com.example.data.settings.SettingsRepository
+import com.example.data.repository.ApiProfileRepository
 import com.example.data.repository.ProfileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -110,7 +110,7 @@ class OnboardingViewModelFactory(
     constructor(context: Context) : this(
         ProfileRepository(
             userDao = AppDatabase.getInstance(context).userDao(),
-            apiService = ConfigurableAiService(SettingsRepository.getInstance(context))
+            apiService = ConfigurableAiService(ApiProfileRepository.getInstance(context))
         )
     )
 

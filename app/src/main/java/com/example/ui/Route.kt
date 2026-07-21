@@ -8,7 +8,15 @@ object Route {
     const val CHAT = "chat"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
-    const val API_SETTINGS = "api_settings"
+    const val API_PROFILES = "api_profiles"
+
+    const val PROFILE_ID_ARG = "profileId"
+
+    /** Doubles as the new-profile and edit-profile destination; no arg means "new". */
+    const val API_PROFILE_EDIT = "api_profile_edit?$PROFILE_ID_ARG={$PROFILE_ID_ARG}"
+
+    fun apiProfileEdit(profileId: String? = null): String =
+        if (profileId == null) "api_profile_edit" else "api_profile_edit?$PROFILE_ID_ARG=$profileId"
 }
 
 /**

@@ -11,11 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.data.local.AppDatabase
-import com.example.ui.ApiSettingsScreen
+import com.example.ui.ApiProfileEditScreen
+import com.example.ui.ApiProfileListScreen
 import com.example.ui.ChatScreen
 import com.example.ui.ChatViewModel
 import com.example.ui.ChatViewModelFactory
@@ -24,6 +27,8 @@ import com.example.ui.OnboardingScreen
 import com.example.ui.Route
 import com.example.ui.SettingsScreen
 import com.example.ui.theme.MyApplicationTheme
+import com.example.viewmodel.ApiProfileViewModel
+import com.example.viewmodel.ApiProfileViewModelFactory
 import com.example.viewmodel.OnboardingViewModel
 import com.example.viewmodel.OnboardingViewModelFactory
 
@@ -79,8 +84,30 @@ class MainActivity : ComponentActivity() {
                 composable(Route.SETTINGS) {
                     SettingsScreen(navController = navController)
                 }
-                composable(Route.API_SETTINGS) {
-                    ApiSettingsScreen(navController = navController)
+                composable(Route.API_PROFILES) {
+                    ApiProfileListScreen(
+                        viewModel = viewModel(factory = ApiProfileViewModelFactory(applicationContext)),
+                        navController = navController
+                    )
+                }
+                composable(
+                    route = Route.API_PROFILE_EDIT,
+                    arguments = listOf(
+                        navArgument(Route.PROFILE_ID_ARG) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    val editViewModel: ApiProfileViewModel = viewModel(
+                        factory = ApiProfileViewModelFactory(applicationContext)
+                    )
+                    ApiProfileEditScreen(
+                        viewModel = editViewModel,
+                        navController = navController,
+                        profileId = backStackEntry.arguments?.getString(Route.PROFILE_ID_ARG)
+                    )
                 }
             }
         }

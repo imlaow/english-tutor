@@ -30,8 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
-import com.example.data.settings.ApiProvider
-import com.example.data.settings.SettingsRepository
+import com.example.data.repository.ApiProfileRepository
 
 /**
  * Main settings hub: lists setting categories, each navigating to its own
@@ -42,8 +41,8 @@ import com.example.data.settings.SettingsRepository
 @Composable
 fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
-    val settingsRepository = remember { SettingsRepository.getInstance(context) }
-    val settings by settingsRepository.settings.collectAsState()
+    val apiProfileRepository = remember { ApiProfileRepository.getInstance(context) }
+    val activeProfile by apiProfileRepository.activeProfile.collectAsState()
 
     Scaffold(
         topBar = {
@@ -70,12 +69,9 @@ fun SettingsScreen(navController: NavController) {
         ) {
             SettingsEntry(
                 title = "API configuration",
-                subtitle = when (settings.provider) {
-                    ApiProvider.GEMINI -> "Gemini"
-                    ApiProvider.OPENAI -> "OpenAI"
-                },
+                subtitle = activeProfile?.name ?: "Not configured",
                 icon = Icons.Filled.Cloud,
-                onClick = { navController.navigate(Route.API_SETTINGS) { launchSingleTop = true } },
+                onClick = { navController.navigate(Route.API_PROFILES) { launchSingleTop = true } },
                 modifier = Modifier.testTag("settings_api_configuration")
             )
         }

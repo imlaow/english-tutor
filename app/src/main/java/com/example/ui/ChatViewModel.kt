@@ -10,7 +10,7 @@ import com.example.data.local.UserProfileEntity
 import com.example.data.remote.AiModelService
 import com.example.data.remote.ConfigurableAiService
 import com.example.data.remote.MissingApiKeyException
-import com.example.data.settings.SettingsRepository
+import com.example.data.repository.ApiProfileRepository
 import com.example.data.repository.ChatRepository
 import com.example.data.repository.ProfileRepository
 import kotlinx.coroutines.CancellationException
@@ -242,12 +242,12 @@ class ChatViewModelFactory(
     constructor(context: Context) : this(
         profileRepository = ProfileRepository(
             userDao = AppDatabase.getInstance(context).userDao(),
-            apiService = ConfigurableAiService(SettingsRepository.getInstance(context))
+            apiService = ConfigurableAiService(ApiProfileRepository.getInstance(context))
         ),
         chatRepository = ChatRepository(
             chatMessageDao = AppDatabase.getInstance(context).chatMessageDao()
         ),
-        apiService = ConfigurableAiService(SettingsRepository.getInstance(context))
+        apiService = ConfigurableAiService(ApiProfileRepository.getInstance(context))
     )
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
