@@ -56,6 +56,11 @@ class MainActivity : ComponentActivity() {
             val chatViewModel: ChatViewModel = viewModel(
                 factory = ChatViewModelFactory(applicationContext)
             )
+            // Shared by the screens that only observe the provider list; the edit
+            // form keeps its own so its draft starts empty on each navigation.
+            val apiProfileViewModel: ApiProfileViewModel = viewModel(
+                factory = ApiProfileViewModelFactory(applicationContext)
+            )
 
             NavHost(
                 navController = navController,
@@ -76,7 +81,11 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 composable(Route.CHAT) {
-                    ChatScreen(viewModel = chatViewModel, navController = navController)
+                    ChatScreen(
+                        viewModel = chatViewModel,
+                        apiProfileViewModel = apiProfileViewModel,
+                        navController = navController
+                    )
                 }
                 composable(Route.HISTORY) {
                     HistoryScreen(viewModel = chatViewModel, navController = navController)
@@ -86,7 +95,7 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Route.API_PROFILES) {
                     ApiProfileListScreen(
-                        viewModel = viewModel(factory = ApiProfileViewModelFactory(applicationContext)),
+                        viewModel = apiProfileViewModel,
                         navController = navController
                     )
                 }

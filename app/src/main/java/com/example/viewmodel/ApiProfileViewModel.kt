@@ -8,8 +8,11 @@ import com.example.data.repository.ApiProfileRepository
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.ApiSpec
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Which required field the user left blank, so the form can point at it. */
@@ -24,7 +27,18 @@ class ApiProfileViewModel(
 ) : ViewModel() {
 
     val profiles: StateFlow<List<ApiProfile>> = repository.profiles
-    val activeProfileId: StateFlow<String?> = repository.activeProfileId
+
+    /** Only these can be made active, so only these belong in a picker. */
+    val enabledProfiles: StateFlow<List<ApiProfile>> = profiles
+        .map { list -> list.filter { it.enabled } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * The profile requests actually use — already accounts for a stored id that
+     * points at a disabled or deleted profile, so screens showing "active" agree
+     * with what [ApiProfileRepository.currentProfile] would pick.
+     */
+    val activeProfile: StateFlow<ApiProfile?> = repository.activeProfile
 
     // Null until loadForEdit() resolves, which keeps the form from flashing
     // blank fields over an existing profile's values.

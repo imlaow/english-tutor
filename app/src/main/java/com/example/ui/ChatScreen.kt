@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.manager.TtsManager
+import com.example.viewmodel.ApiProfileViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -42,8 +43,14 @@ import java.util.*
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
+fun ChatScreen(
+    viewModel: ChatViewModel,
+    apiProfileViewModel: ApiProfileViewModel,
+    navController: NavController
+) {
     val context = LocalContext.current
+    val activeProfile by apiProfileViewModel.activeProfile.collectAsStateWithLifecycle()
+    val enabledProfiles by apiProfileViewModel.enabledProfiles.collectAsStateWithLifecycle()
     val isRecording by viewModel.isRecording.collectAsStateWithLifecycle()
     val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -115,7 +122,17 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("English Tutor", fontWeight = FontWeight.Bold) },
+                title = {
+                    ProviderSelector(
+                        title = "English Tutor",
+                        activeProfile = activeProfile,
+                        enabledProfiles = enabledProfiles,
+                        onSelect = apiProfileViewModel::setActive,
+                        onManage = {
+                            navController.navigate(Route.API_PROFILES) { launchSingleTop = true }
+                        }
+                    )
+                },
                 navigationIcon = {
                     IconButton(
                         onClick = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } },

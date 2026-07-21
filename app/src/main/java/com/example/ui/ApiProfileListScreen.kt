@@ -57,13 +57,10 @@ fun ApiProfileListScreen(
     navController: NavController
 ) {
     val profiles by viewModel.profiles.collectAsState()
-    val activeProfileId by viewModel.activeProfileId.collectAsState()
+    // Resolved by the repository, so a stored id pointing at a disabled or
+    // deleted profile shows the same fallback row the chat top bar shows.
+    val activeProfile by viewModel.activeProfile.collectAsState()
     var pendingDeletion by remember { mutableStateOf<ApiProfile?>(null) }
-
-    // The stored id may point at a disabled or deleted profile; the row that is
-    // actually used is the one the repository would fall back to.
-    val effectiveActiveId = profiles.firstOrNull { it.id == activeProfileId && it.enabled }?.id
-        ?: profiles.firstOrNull { it.enabled }?.id
 
     Scaffold(
         topBar = {
@@ -109,7 +106,7 @@ fun ApiProfileListScreen(
             items(profiles, key = { it.id }) { profile ->
                 ApiProfileRow(
                     profile = profile,
-                    isActive = profile.id == effectiveActiveId,
+                    isActive = profile.id == activeProfile?.id,
                     onSelect = { viewModel.setActive(profile.id) },
                     onEdit = { navController.navigate(Route.apiProfileEdit(profile.id)) },
                     onToggleEnabled = { viewModel.setEnabled(profile.id, !profile.enabled) },
