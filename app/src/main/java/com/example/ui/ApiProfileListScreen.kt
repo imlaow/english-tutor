@@ -79,7 +79,7 @@ fun ApiProfileListScreen(
                         onClick = { navController.navigate(Route.apiProfileEdit()) },
                         modifier = Modifier.testTag("add_api_profile_button")
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add profile")
+                        Icon(Icons.Filled.Add, contentDescription = "Add provider")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -122,7 +122,7 @@ fun ApiProfileListScreen(
     pendingDeletion?.let { profile ->
         AlertDialog(
             onDismissRequest = { pendingDeletion = null },
-            title = { Text("Delete profile?") },
+            title = { Text("Delete provider?") },
             text = { Text("\"${profile.name}\" and its API key will be removed.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -217,18 +217,18 @@ private fun EmptyProfileList(onAdd: () -> Unit, modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "No API profiles yet",
+            text = "No API providers yet",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Add a profile with your API key to start chatting with the AI tutor.",
+            text = "Add a provider with your API key to start chatting with the AI tutor.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
         Button(onClick = onAdd, modifier = Modifier.testTag("add_first_api_profile_button")) {
-            Text("Add profile")
+            Text("Add provider")
         }
     }
 }

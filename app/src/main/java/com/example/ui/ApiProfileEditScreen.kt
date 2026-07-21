@@ -63,7 +63,7 @@ fun ApiProfileEditScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (profileId == null) "New profile" else "Edit profile",
+                        text = if (profileId == null) "New provider" else "Edit provider",
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -97,8 +97,8 @@ fun ApiProfileEditScreen(
                 label = { Text("Name") },
                 supportingText = {
                     Text(
-                        if (formError == ApiProfileFormError.NAME) "Give the profile a name."
-                        else "Shown in the profile list."
+                        if (formError == ApiProfileFormError.NAME) "Give the provider a name."
+                        else "Shown in the provider list."
                     )
                 },
                 isError = formError == ApiProfileFormError.NAME,
@@ -182,7 +182,7 @@ fun ApiProfileEditScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Enabled", style = MaterialTheme.typography.bodyLarge)
                     Text(
-                        text = "Disabled profiles can't be selected as active.",
+                        text = "Disabled providers can't be selected as active.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
