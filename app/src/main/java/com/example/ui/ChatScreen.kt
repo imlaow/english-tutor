@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -154,8 +155,6 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val lastMsg = history.lastOrNull()
-
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -171,25 +170,41 @@ fun ChatScreen(viewModel: ChatViewModel, navController: NavController) {
                         )
                     }
                 } else {
-                    Column(
+                    val listState = rememberLazyListState()
+                    val trailingItemCount =
+                        (if (recognizedText.isNotEmpty()) 1 else 0) + (if (isProcessing) 1 else 0)
+                    val totalItemCount = history.size + trailingItemCount
+
+                    // Keep the newest turn (or the in-flight interim bubble/spinner) in view.
+                    LaunchedEffect(totalItemCount) {
+                        if (totalItemCount > 0) listState.animateScrollToItem(totalItemCount - 1)
+                    }
+
+                    LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        if (recognizedText.isNotEmpty()) {
-                            ChatBubble(text = recognizedText, isUser = true)
-                        } else if (lastMsg != null) {
-                            ChatBubble(text = lastMsg.userText, isUser = true)
-                        }
-
-                        if (isProcessing) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
-                        } else {
-                            if (lastMsg != null && recognizedText.isEmpty()) {
+                        items(history, key = { it.id }) { message ->
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ChatBubble(text = message.userText, isUser = true)
                                 ChatBubble(
-                                    text = lastMsg.aiResponse,
-                                    grammarCorrection = lastMsg.grammarCorrection,
+                                    text = message.aiResponse,
+                                    grammarCorrection = message.grammarCorrection,
                                     isUser = false
                                 )
+                            }
+                        }
+                        if (recognizedText.isNotEmpty()) {
+                            item(key = "interim_user_text") {
+                                ChatBubble(text = recognizedText, isUser = true)
+                            }
+                        }
+                        if (isProcessing) {
+                            item(key = "processing_indicator") {
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
                             }
                         }
                     }
