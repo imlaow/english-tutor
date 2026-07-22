@@ -1,5 +1,7 @@
 package com.example.data.remote
 
+import kotlinx.coroutines.flow.Flow
+
 /**
  * Common contract for chat-completion backends (Gemini, OpenAI-compatible, ...).
  */
@@ -15,6 +17,17 @@ interface AiModelService {
         userPrompt: String,
         responseMimeType: String? = null
     ): String
+
+    /**
+     * Same request as [generateContent], but emits the text incrementally as the
+     * model produces it. Only the connection test uses this today; the chat
+     * still waits for a complete reply because it parses one JSON object per turn.
+     */
+    fun generateContentStream(
+        systemPrompt: String,
+        userPrompt: String,
+        responseMimeType: String? = null
+    ): Flow<String>
 }
 
 class AiApiException(message: String) : Exception(message)

@@ -3,6 +3,9 @@ package com.example.data.repository
 import android.content.Context
 import com.example.data.local.AppDatabase
 import com.example.data.local.ApiProfileDao
+import com.example.data.remote.ConnectionTestResult
+import com.example.data.remote.ConnectionTester
+import com.example.data.remote.toAiService
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.toDomain
 import com.example.data.settings.toEntity
@@ -53,6 +56,13 @@ class ApiProfileRepository private constructor(
         dao.getAll().map { it.toDomain() }.pickActive(_activeProfileId.value)
 
     suspend fun getProfile(id: String): ApiProfile? = dao.getById(id)?.toDomain()
+
+    /**
+     * Probes [profile] without saving it, so the edit form can verify a key
+     * before it is committed. Nothing here touches the stored profiles.
+     */
+    suspend fun testConnection(profile: ApiProfile): ConnectionTestResult =
+        ConnectionTester.test(profile.toAiService())
 
     /**
      * Inserts or updates [profile]. New profiles go to the end of the list, and

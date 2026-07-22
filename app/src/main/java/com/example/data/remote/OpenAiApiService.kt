@@ -1,6 +1,9 @@
 package com.example.data.remote
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -26,7 +29,35 @@ class OpenAiApiService(
         userPrompt: String,
         responseMimeType: String?
     ): String = withContext(Dispatchers.IO) {
-        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        val connection = openConnection()
+        try {
+            connection.writeBody(buildRequestBody(systemPrompt, userPrompt, responseMimeType))
+            extractText(connection.readBodyOrThrow(PROVIDER))
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    override fun generateContentStream(
+        systemPrompt: String,
+        userPrompt: String,
+        responseMimeType: String?
+    ): Flow<String> = flow {
+        val connection = openConnection()
+        try {
+            connection.writeBody(
+                buildRequestBody(systemPrompt, userPrompt, responseMimeType, stream = true)
+            )
+            connection.streamSseData(PROVIDER) { data ->
+                extractStreamText(data)?.let { emit(it) }
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }.flowOn(Dispatchers.IO)
+
+    private fun openConnection(): HttpURLConnection =
+        (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             setRequestProperty("Content-Type", "application/json")
             setRequestProperty("Authorization", "Bearer $apiKey")
@@ -34,26 +65,12 @@ class OpenAiApiService(
             readTimeout = TIMEOUT_MS
             doOutput = true
         }
-        try {
-            connection.outputStream.use { output ->
-                output.write(buildRequestBody(systemPrompt, userPrompt, responseMimeType).toByteArray())
-            }
-            val status = connection.responseCode
-            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            if (status !in 200..299) {
-                throw AiApiException("OpenAI request failed with HTTP $status: $body")
-            }
-            extractText(body)
-        } finally {
-            connection.disconnect()
-        }
-    }
 
     private fun buildRequestBody(
         systemPrompt: String,
         userPrompt: String,
-        responseMimeType: String?
+        responseMimeType: String?,
+        stream: Boolean = false
     ): String {
         val body = JSONObject()
             .put("model", model)
@@ -65,6 +82,9 @@ class OpenAiApiService(
             )
         if (responseMimeType == "application/json") {
             body.put("response_format", JSONObject().put("type", "json_object"))
+        }
+        if (stream) {
+            body.put("stream", true)
         }
         return body.toString()
     }
@@ -79,7 +99,19 @@ class OpenAiApiService(
             .optString("content")
     }
 
+    /**
+     * Null for the frames that carry no text — the first chunk announces only
+     * the role, and the last carries only a finish reason.
+     */
+    private fun extractStreamText(data: String): String? =
+        JSONObject(data).optJSONArray("choices")
+            ?.optJSONObject(0)
+            ?.optJSONObject("delta")
+            ?.optString("content")
+            ?.ifEmpty { null }
+
     companion object {
+        private const val PROVIDER = "OpenAI"
         const val DEFAULT_MODEL = "gpt-4o-mini"
         const val DEFAULT_BASE_URL = "https://api.openai.com/v1"
         private const val TIMEOUT_MS = 30_000

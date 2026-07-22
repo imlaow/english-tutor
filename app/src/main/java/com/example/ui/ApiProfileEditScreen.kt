@@ -8,13 +8,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -32,14 +37,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.data.remote.ProbeOutcome
 import com.example.data.settings.ApiSpec
 import com.example.data.settings.defaultBaseUrl
 import com.example.data.settings.defaultModel
 import com.example.data.settings.displayName
 import com.example.viewmodel.ApiProfileFormError
 import com.example.viewmodel.ApiProfileViewModel
+import com.example.viewmodel.ConnectionTestState
 
 /**
  * New/edit form for a single API profile. [profileId] null means "new"; the
@@ -57,6 +65,7 @@ fun ApiProfileEditScreen(
 
     val draft by viewModel.draft.collectAsState()
     val formError by viewModel.formError.collectAsState()
+    val connectionTest by viewModel.connectionTest.collectAsState()
 
     Scaffold(
         topBar = {
@@ -196,6 +205,35 @@ fun ApiProfileEditScreen(
                 )
             }
 
+            OutlinedButton(
+                onClick = { viewModel.testConnection() },
+                enabled = connectionTest !is ConnectionTestState.Running,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("test_connection_button")
+            ) {
+                if (connectionTest is ConnectionTestState.Running) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                } else {
+                    Text("Test connection")
+                }
+            }
+
+            (connectionTest as? ConnectionTestState.Done)?.let { done ->
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("connection_test_result")
+                ) {
+                    ProbeResultRow("Non-streaming", done.result.nonStreaming)
+                    ProbeResultRow("Streaming", done.result.streaming)
+                }
+            }
+
             Button(
                 onClick = { viewModel.save(onSaved = { navController.safePopBackStack() }) },
                 modifier = Modifier
@@ -203,6 +241,51 @@ fun ApiProfileEditScreen(
                     .testTag("save_settings_button")
             ) {
                 Text("Save")
+            }
+        }
+    }
+}
+
+/**
+ * One line of connection-test feedback. A failure keeps the provider's raw
+ * response below the headline — that body is what distinguishes a rejected key
+ * from an unknown model name — but capped, so a provider that answers with an
+ * HTML error page can't push the Save button off screen.
+ */
+@Composable
+private fun ProbeResultRow(label: String, outcome: ProbeOutcome) {
+    val color =
+        if (outcome is ProbeOutcome.Success) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.error
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = if (outcome is ProbeOutcome.Success) Icons.Filled.Check
+            else Icons.Filled.Close,
+            contentDescription = if (outcome is ProbeOutcome.Success) "Passed" else "Failed",
+            tint = color,
+            modifier = Modifier.size(20.dp)
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = when (outcome) {
+                    is ProbeOutcome.Success -> "$label · ${outcome.detail}"
+                    is ProbeOutcome.Failure -> "$label · ${outcome.summary}"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = color
+            )
+            (outcome as? ProbeOutcome.Failure)?.detail?.let { detail ->
+                Text(
+                    text = detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
