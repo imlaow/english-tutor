@@ -172,6 +172,52 @@ class ChatViewModel(
         }
     }
 
+    /**
+     * Opens a fresh conversation about a recommended topic. Unlike
+     * [onSpeechResult], there is no learner utterance yet: the tutor speaks
+     * first, so the stored turn has a blank [ChatMessage.userText] and no grammar
+     * correction. The learner then replies by voice, continuing this session.
+     */
+    fun startTopic(topic: String) {
+        if (topic.isBlank()) return
+
+        startNewSession()
+        val sessionId = _currentSessionId.value ?: java.util.UUID.randomUUID().toString()
+        _currentSessionId.value = sessionId
+        _isProcessing.value = true
+        _error.value = null
+
+        viewModelScope.launch {
+            try {
+                val profile = profileRepository.getUserProfile()
+                val rawJson = apiService.generateContent(
+                    systemPrompt = buildSystemPrompt(profile),
+                    userPrompt = buildTopicOpenerPrompt(topic),
+                    responseMimeType = "application/json"
+                )
+                val message = parseTutorReply(sessionId, userText = "", rawJson = rawJson)
+
+                chatRepository.saveMessage(message.toEntity())
+                _speakEvent.value = message.aiResponse
+                _isProcessing.value = false
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: MissingApiKeyException) {
+                _error.value = "Add your API key in Settings (gear icon, top-left) to start chatting."
+                _isProcessing.value = false
+            } catch (e: Exception) {
+                _error.value = "Couldn't reach your AI tutor. Please check your connection and try again."
+                _isProcessing.value = false
+            }
+        }
+    }
+
+    private fun buildTopicOpenerPrompt(topic: String): String = buildString {
+        appendLine("Open the conversation yourself: warmly introduce this topic and ask the learner one question to get them talking.")
+        appendLine("Topic: \"$topic\"")
+        append("The learner hasn't said anything yet, so set grammar_correction to null.")
+    }
+
     private fun buildSystemPrompt(profile: UserProfileEntity?): String = buildString {
         appendLine("You are a friendly, encouraging English tutor in a spoken-conversation practice app.")
         appendLine("Reply naturally to the learner in English, keep it short (1-3 sentences) and easy to speak aloud, and end with a question that keeps the conversation going.")
@@ -194,7 +240,8 @@ class ChatViewModel(
         return buildString {
             appendLine("Recent conversation:")
             recentTurns.forEach { turn ->
-                appendLine("Learner: ${turn.userText}")
+                // A topic-opener turn has no learner utterance; skip the empty line.
+                if (turn.userText.isNotBlank()) appendLine("Learner: ${turn.userText}")
                 appendLine("Tutor: ${turn.aiResponse}")
             }
             appendLine()

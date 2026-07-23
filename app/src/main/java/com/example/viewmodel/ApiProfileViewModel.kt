@@ -52,6 +52,12 @@ class ApiProfileViewModel(
      */
     val activeProfile: StateFlow<ApiProfile?> = repository.activeProfile
 
+    /** The stored topic-generation choice; null means "reuse the chat provider". */
+    val topicProfileId: StateFlow<String?> = repository.topicProfileId
+
+    /** The profile topic generation actually uses, with the chat-provider fallback resolved. */
+    val topicProfile: StateFlow<ApiProfile?> = repository.topicProfile
+
     // Null until loadForEdit() resolves, which keeps the form from flashing
     // blank fields over an existing profile's values.
     private val _draft = MutableStateFlow<ApiProfile?>(null)
@@ -66,6 +72,9 @@ class ApiProfileViewModel(
     private var connectionTestJob: Job? = null
 
     fun setActive(id: String) = repository.setActive(id)
+
+    /** Passing null clears the choice, falling back to the active chat provider. */
+    fun setTopicProfile(id: String?) = repository.setTopicProfile(id)
 
     fun setEnabled(id: String, enabled: Boolean) {
         viewModelScope.launch { repository.setEnabled(id, enabled) }

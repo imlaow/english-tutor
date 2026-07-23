@@ -26,11 +26,14 @@ import com.example.ui.HistoryScreen
 import com.example.ui.OnboardingScreen
 import com.example.ui.Route
 import com.example.ui.SettingsScreen
+import com.example.ui.TopicProviderScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.ApiProfileViewModel
 import com.example.viewmodel.ApiProfileViewModelFactory
 import com.example.viewmodel.OnboardingViewModel
 import com.example.viewmodel.OnboardingViewModelFactory
+import com.example.viewmodel.TopicsViewModel
+import com.example.viewmodel.TopicsViewModelFactory
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,9 +84,15 @@ class MainActivity : ComponentActivity() {
                     )
                 }
                 composable(Route.CHAT) {
+                    // Scoped to the chat back-stack entry so topics regenerate once
+                    // per launch, not when returning from Settings/History.
+                    val topicsViewModel: TopicsViewModel = viewModel(
+                        factory = TopicsViewModelFactory(applicationContext)
+                    )
                     ChatScreen(
                         viewModel = chatViewModel,
                         apiProfileViewModel = apiProfileViewModel,
+                        topicsViewModel = topicsViewModel,
                         navController = navController
                     )
                 }
@@ -95,6 +104,12 @@ class MainActivity : ComponentActivity() {
                 }
                 composable(Route.API_PROFILES) {
                     ApiProfileListScreen(
+                        viewModel = apiProfileViewModel,
+                        navController = navController
+                    )
+                }
+                composable(Route.TOPIC_PROVIDER) {
+                    TopicProviderScreen(
                         viewModel = apiProfileViewModel,
                         navController = navController
                     )

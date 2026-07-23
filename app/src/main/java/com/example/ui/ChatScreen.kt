@@ -8,6 +8,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.example.manager.TtsManager
 import com.example.viewmodel.ApiProfileViewModel
+import com.example.viewmodel.TopicsViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -46,11 +49,15 @@ import java.util.*
 fun ChatScreen(
     viewModel: ChatViewModel,
     apiProfileViewModel: ApiProfileViewModel,
+    topicsViewModel: TopicsViewModel,
     navController: NavController
 ) {
     val context = LocalContext.current
     val activeProfile by apiProfileViewModel.activeProfile.collectAsStateWithLifecycle()
     val enabledProfiles by apiProfileViewModel.enabledProfiles.collectAsStateWithLifecycle()
+    val topics by topicsViewModel.topics.collectAsStateWithLifecycle()
+    val topicsLoading by topicsViewModel.isLoading.collectAsStateWithLifecycle()
+    val topicsError by topicsViewModel.error.collectAsStateWithLifecycle()
     val isRecording by viewModel.isRecording.collectAsStateWithLifecycle()
     val isProcessing by viewModel.isProcessing.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -179,11 +186,16 @@ fun ChatScreen(
                 contentAlignment = Alignment.Center
             ) {
                 if (history.isEmpty() && recognizedText.isEmpty()) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Tap the microphone to start speaking.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    if (isProcessing) {
+                        // The tutor is preparing its opening line for a tapped topic.
+                        CircularProgressIndicator()
+                    } else {
+                        TopicSuggestions(
+                            topics = topics,
+                            isLoading = topicsLoading,
+                            error = topicsError,
+                            onTopicClick = viewModel::startTopic,
+                            onRefresh = topicsViewModel::refresh
                         )
                     }
                 } else {
@@ -204,7 +216,11 @@ fun ChatScreen(
                     ) {
                         items(history, key = { it.id }) { message ->
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ChatBubble(text = message.userText, isUser = true)
+                                // A topic-opener turn has no learner utterance, so it
+                                // shows only the tutor's bubble.
+                                if (message.userText.isNotBlank()) {
+                                    ChatBubble(text = message.userText, isUser = true)
+                                }
                                 ChatBubble(
                                     text = message.aiResponse,
                                     grammarCorrection = message.grammarCorrection,
@@ -269,6 +285,86 @@ fun ChatScreen(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun TopicSuggestions(
+    topics: List<String>,
+    isLoading: Boolean,
+    error: String?,
+    onTopicClick: (String) -> Unit,
+    onRefresh: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        when {
+            topics.isNotEmpty() -> {
+                Text(
+                    text = "Try one of these topics:",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                topics.forEachIndexed { index, topic ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("topic_card_$index")
+                            .clickable { onTopicClick(topic) }
+                    ) {
+                        Text(
+                            text = topic,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+            isLoading -> {
+                CircularProgressIndicator()
+                Text(
+                    text = "Finding topics for you…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            error != null -> {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+            else -> {
+                Text(
+                    text = "Tap the microphone to start speaking.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Available after the first load so the learner can retry an error or ask
+        // for a different set; disabled mid-request to avoid overlapping calls.
+        TextButton(
+            onClick = onRefresh,
+            enabled = !isLoading,
+            modifier = Modifier.testTag("refresh_topics_button")
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Refresh")
         }
     }
 }

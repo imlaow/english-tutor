@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,8 @@ fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val apiProfileRepository = remember { ApiProfileRepository.getInstance(context) }
     val activeProfile by apiProfileRepository.activeProfile.collectAsState()
+    val topicProfileId by apiProfileRepository.topicProfileId.collectAsState()
+    val topicProfile by apiProfileRepository.topicProfile.collectAsState()
 
     Scaffold(
         topBar = {
@@ -73,6 +76,17 @@ fun SettingsScreen(navController: NavController) {
                 icon = Icons.Filled.Cloud,
                 onClick = { navController.navigate(Route.API_PROFILES) { launchSingleTop = true } },
                 modifier = Modifier.testTag("settings_api_configuration")
+            )
+            SettingsEntry(
+                title = "Topic generation",
+                subtitle = if (topicProfileId == null) {
+                    "Chat provider (default)"
+                } else {
+                    topicProfile?.name ?: "Chat provider (default)"
+                },
+                icon = Icons.Filled.Lightbulb,
+                onClick = { navController.navigate(Route.TOPIC_PROVIDER) { launchSingleTop = true } },
+                modifier = Modifier.testTag("settings_topic_generation")
             )
         }
     }

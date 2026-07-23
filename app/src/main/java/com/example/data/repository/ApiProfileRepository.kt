@@ -47,6 +47,17 @@ class ApiProfileRepository private constructor(
         combine(profiles, _activeProfileId) { list, id -> list.pickActive(id) }
             .stateIn(scope, SharingStarted.Eagerly, null)
 
+    // Which profile generates the home-screen topic suggestions. Kept separate
+    // from the active chat profile so the user can point topic generation at a
+    // cheaper model; null means "reuse whatever the chat is using".
+    private val _topicProfileId = MutableStateFlow(prefs.getString(KEY_TOPIC_PROFILE_ID, null))
+    val topicProfileId: StateFlow<String?> = _topicProfileId.asStateFlow()
+
+    val topicProfile: StateFlow<ApiProfile?> =
+        combine(profiles, _topicProfileId, _activeProfileId) { list, topicId, activeId ->
+            list.pickTopic(topicId, activeId)
+        }.stateIn(scope, SharingStarted.Eagerly, null)
+
     /**
      * One-shot read of the active profile, going straight to the DAO. Request
      * time can't use [activeProfile] because its first emission may not have
@@ -54,6 +65,13 @@ class ApiProfileRepository private constructor(
      */
     suspend fun currentProfile(): ApiProfile? =
         dao.getAll().map { it.toDomain() }.pickActive(_activeProfileId.value)
+
+    /**
+     * One-shot read of the topic-generation profile (same reasoning as
+     * [currentProfile]). Falls back to the active chat profile when none is set.
+     */
+    suspend fun currentTopicProfile(): ApiProfile? =
+        dao.getAll().map { it.toDomain() }.pickTopic(_topicProfileId.value, _activeProfileId.value)
 
     suspend fun getProfile(id: String): ApiProfile? = dao.getById(id)?.toDomain()
 
@@ -83,12 +101,18 @@ class ApiProfileRepository private constructor(
         if (_activeProfileId.value == id) {
             setActive(null)
         }
+        if (_topicProfileId.value == id) {
+            setTopicProfile(null)
+        }
     }
 
     suspend fun setEnabled(id: String, enabled: Boolean) {
         dao.setEnabled(id, enabled)
         if (!enabled && _activeProfileId.value == id) {
             setActive(null)
+        }
+        if (!enabled && _topicProfileId.value == id) {
+            setTopicProfile(null)
         }
     }
 
@@ -98,12 +122,22 @@ class ApiProfileRepository private constructor(
         _activeProfileId.value = id
     }
 
+    /** Passing null clears the choice, letting [topicProfile] fall back to the active chat profile. */
+    fun setTopicProfile(id: String?) {
+        prefs.edit().putString(KEY_TOPIC_PROFILE_ID, id).apply()
+        _topicProfileId.value = id
+    }
+
     private fun List<ApiProfile>.pickActive(id: String?): ApiProfile? =
         firstOrNull { it.id == id && it.enabled } ?: firstOrNull { it.enabled }
+
+    private fun List<ApiProfile>.pickTopic(topicId: String?, activeId: String?): ApiProfile? =
+        firstOrNull { it.id == topicId && it.enabled } ?: pickActive(activeId)
 
     companion object {
         private const val PREFS_NAME = "api_profile_settings"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
+        private const val KEY_TOPIC_PROFILE_ID = "topic_profile_id"
 
         @Volatile
         private var instance: ApiProfileRepository? = null

@@ -9,6 +9,7 @@ object Route {
     const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val API_PROFILES = "api_profiles"
+    const val TOPIC_PROVIDER = "topic_provider"
 
     const val PROFILE_ID_ARG = "profileId"
 
