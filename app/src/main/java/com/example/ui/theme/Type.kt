@@ -2,21 +2,44 @@ package com.example.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.example.R
+
+/**
+ * Source Serif 4, bundled in `res/font/` rather than requested through
+ * [FontFamily.Serif].
+ *
+ * [FontFamily.Serif] is a lookup by name — it asks the platform for whatever it
+ * currently calls "serif" — so a device with a system font overlay applied
+ * (Settings → Personalize → Fonts) can answer with a sans face and silently
+ * erase the serif/sans split this scale is built on. Naming the file directly
+ * is the only way an app can guarantee the face it renders.
+ *
+ * Only the two weights the scale actually asks for are bundled; anything else
+ * would be synthesized. Licensed under the SIL OFL 1.1 — see
+ * `licenses/SourceSerif4-OFL.md`.
+ */
+val SourceSerif =
+  FontFamily(
+    Font(R.font.source_serif_regular, FontWeight.Normal),
+    Font(R.font.source_serif_semibold, FontWeight.SemiBold),
+  )
 
 /**
  * The redesign's serif/sans split.
  *
- * `displayLarge` → `titleLarge` are [FontFamily.Serif]; `titleMedium` →
- * `labelSmall` are [FontFamily.Default]. Serif is chrome — screen titles,
- * headings, section headers — never conversation: `bodyLarge` carries chat
- * message text and deliberately stays sans at 16sp/24sp.
+ * `displayLarge` → `titleLarge` are [SourceSerif]; `titleMedium` → `labelSmall`
+ * are [FontFamily.Default]. Serif is chrome — screen titles, headings, section
+ * headers — never conversation: `bodyLarge` carries chat message text and
+ * deliberately stays sans at 16sp/24sp.
  *
- * [FontFamily.Serif] resolves to the platform serif (Noto Serif on every device
- * at `minSdk 24`), so this costs zero font assets and zero dependencies —
- * `res/font/` stays empty.
+ * The serif side is a bundled font so it cannot be overridden by a device font
+ * setting; see [SourceSerif]. The sans side stays [FontFamily.Default] on
+ * purpose — body text following the user's chosen system font is a feature, and
+ * the split survives as long as the serif half is pinned.
  *
  * Headings tighten `letterSpacing` to -0.3.sp and carry their own
  * [FontWeight.SemiBold], which is why call sites no longer pass an ad-hoc
@@ -28,7 +51,7 @@ val Typography =
     // ----- Serif: display -----
     displayLarge =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
@@ -36,7 +59,7 @@ val Typography =
       ),
     displayMedium =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 45.sp,
         lineHeight = 52.sp,
@@ -44,7 +67,7 @@ val Typography =
       ),
     displaySmall =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 36.sp,
         lineHeight = 44.sp,
@@ -53,7 +76,7 @@ val Typography =
     // ----- Serif: headline -----
     headlineLarge =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
@@ -61,7 +84,7 @@ val Typography =
       ),
     headlineMedium =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
@@ -69,7 +92,7 @@ val Typography =
       ),
     headlineSmall =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
@@ -78,7 +101,7 @@ val Typography =
     // ----- Serif: the boundary style. TopAppBar titles land here. -----
     titleLarge =
       TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = SourceSerif,
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
