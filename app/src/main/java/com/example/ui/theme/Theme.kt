@@ -110,6 +110,11 @@ fun MyApplicationTheme(
   val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
 
   CompositionLocalProvider(LocalExtendedColors provides extendedColors) {
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(
+      colorScheme = colorScheme,
+      typography = Typography,
+      shapes = AppShapes,
+      content = content,
+    )
   }
 }
