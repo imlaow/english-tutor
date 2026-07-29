@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.displayName
@@ -60,8 +59,7 @@ fun ProviderSelector(
             Column {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium
                 )
                 Text(
                     text = activeProfile?.name ?: "No provider configured",

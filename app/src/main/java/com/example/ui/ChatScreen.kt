@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -398,8 +397,7 @@ fun ChatBubble(text: String, isUser: Boolean, grammarCorrection: String? = null)
                     Text(
                         text = "Grammar Correction",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
 import com.example.data.repository.ApiProfileRepository
 
@@ -50,7 +49,7 @@ fun SettingsScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+                title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = { navController.safePopBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
