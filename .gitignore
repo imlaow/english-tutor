@@ -17,3 +17,8 @@ local.properties
 .env
 debug.keystore
 TASKS.md
+
+# Release signing key — never commit
+*.jks
+*.keystore
+keystore.properties
