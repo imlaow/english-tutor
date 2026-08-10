@@ -44,7 +44,7 @@ others in visual value. Defined in `ui/theme/Color.kt`.
 Plus four standalone values: background `F5EAD8`, surface `EBDDC5`, text `201E1D`, and
 divider `201E1D` at 16% alpha.
 
-### Material role mapping
+### Role mapping
 
 The palette reaches screens through `MaterialTheme.colorScheme`, so stock components
 inherit it. **Take colours from a role or a named token — never a raw hex.**
@@ -108,7 +108,7 @@ Headings are `lineHeight ×1.12` with `-0.015em` tracking; body is `×1.55` with
 `titleSmall` is the one role that breaks the display/body split: every 16sp in the
 handoff is body weight, and Caprasimo at 16 is used nowhere.
 
-Two named extras, since no Material role fits:
+Two named extras, since no role in the scale fits:
 
 - `SectionKicker` — 11sp semibold at `.14em`, for `SUGGESTED FOR YOU` / `MODEL`.
   `labelMedium` is the same size but untracked, and is right for pills and counts.
@@ -136,7 +136,7 @@ Shadows are ink-tinted and soft. Approximated as Compose elevation: **sm ≈ 2dp
 
 Icons are Lucide-style: 24 viewport, 2.75 stroke, round caps and joins, no fill. All 16
 live in `res/drawable/ic_*.xml`. **Use `painterResource(R.drawable.ic_*)`, never
-`Icons.*`** — the Material set is filled and reads as a different family.
+`Icons.*`** — that set is filled and reads as a different family.
 
 ---
 
@@ -166,8 +166,9 @@ Each of these is a decision, not drift. **Do not "fix" them back without reading
 
 1. **`outline` is Neutral600, not the handoff's divider.** Control edges have to be
    findable; see above.
-2. **Text fields are 56dp, not the sheet's 36dp minimum.** Material cannot go lower
-   without a hand-built decoration box, and 36dp is under the 48dp touch target anyway.
+2. **Text fields are 56dp, not the sheet's 36dp minimum.** The stock text field cannot
+   go lower without a hand-built decoration box, and 36dp is under the 48dp touch target
+   anyway.
 3. **Field labels sit above the box, not notched into the border.** A pill border has
    nowhere to cut a notch. The label is mirrored into `contentDescription` so the input
    still announces itself.
@@ -185,7 +186,8 @@ Accepted to stay faithful, and worth knowing before anyone reports them as bugs:
   non-text. It is drawn that way. Recording is signalled by the pulse ring and the label,
   not by colour alone.
 - `secondary` / `onSecondary` is 2.58:1.
-- `IconButton44` is 44dp, under Material's 48dp guidance, because the handoff draws 44.
+- `IconButton44` is 44dp, under the usual 48dp touch-target guidance, because the
+  handoff draws 44.
 - A disabled radio inherits the handoff's only disabled treatment, 45% opacity, which on
   a hairline leaves very little ink. The row's dimmed label carries the meaning.
 
@@ -196,6 +198,6 @@ Onboarding and the three API-profile screens were never drawn. They use the shel
 and they have no drawing to be measured against — their goldens use the default device
 qualifier rather than the handoff's 393dp canvas.
 
-Material stays the default for anything this file does not cover — that is what
-`ARCHITECTURE.md` means by it. Where the two disagree, on the four designed screens, the
-handoff wins.
+Anything this file does not specify falls back to whatever the Compose components do by
+default. That is a gap, not a standard: if you find yourself deciding a colour or a
+radius that is not written down here, write it down here.

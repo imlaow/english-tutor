@@ -43,7 +43,7 @@ ViewModel or `BuildConfig` — never a literal.
 Sample sentences belong in `ScreenSpecimens.kt` (test source only), and are deliberately
 written to differ from the handoff's own mock text.
 
-## The design system supersedes stock Material
+## Use the design system
 
 `DESIGN.md` has the palette, type scale and component inventory. The short version:
 reuse what is in `ui/DesignSystem.kt` rather than rebuilding it, use

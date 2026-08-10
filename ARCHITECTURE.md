@@ -1,7 +1,7 @@
 # English Learning App Architecture & Development Guidelines
 
 ## 1. Core Tech Stack
-- **UI Framework**: Kotlin + Jetpack Compose. Material Design is the default, but the app now carries a design system of its own — see `DESIGN.md`, which supersedes this line wherever the two disagree. Reuse the components in `ui/DesignSystem.kt` rather than inventing new ones.
+- **UI Framework**: Kotlin + Jetpack Compose. The app has a design system of its own, specified in `DESIGN.md` and implemented in `ui/theme/` and `ui/DesignSystem.kt`. Reuse those components rather than inventing new ones, and take every colour, size and shape from `DESIGN.md`.
 - **Architecture Pattern**: MVVM (Model-View-ViewModel) with Unidirectional Data Flow (UDF).
 - **Dependency Injection**: Manual Dependency Injection (Manual DI) - Use ViewModelProvider.Factory. Do not introduce third-party frameworks like Hilt/Koin.
 - **Local Database**: Room.
