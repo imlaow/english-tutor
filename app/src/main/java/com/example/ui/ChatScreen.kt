@@ -7,6 +7,13 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,8 +27,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -33,6 +38,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,7 +48,12 @@ import androidx.navigation.NavController
 import com.example.R
 import com.example.manager.TtsManager
 import com.example.ui.theme.Accent100
+import com.example.ui.theme.Accent2100
+import com.example.ui.theme.Accent2500
+import com.example.ui.theme.Accent2600
 import com.example.ui.theme.Accent2700
+import com.example.ui.theme.Accent2900
+import com.example.ui.theme.Accent400
 import com.example.ui.theme.Accent700
 import com.example.ui.theme.Accent800
 import com.example.ui.theme.Neutral200
@@ -138,177 +149,281 @@ fun ChatScreen(
         if (history.isNotEmpty()) recognizedText = ""
     }
 
+    // The handoff draws the topic list and the conversation as two screens, but they
+    // are one destination here, so the top bar, the body and the dock all switch on
+    // the same flag. Interim recognized text counts: the bar must not fall back to
+    // the home layout between the learner speaking and the turn being stored.
+    val inConversation = history.isNotEmpty() || recognizedText.isNotEmpty()
+
+    // The back arrow and the ＋ have the same destination: this screen has no back
+    // stack under it (chat is the start destination), and an empty session is what
+    // the design draws as "Home".
+    val openEmptySession: () -> Unit = {
+        recognizedText = ""
+        recognitionError = null
+        viewModel.startNewSession()
+    }
+
+    val openHistory: () -> Unit = {
+        navController.navigate(Route.HISTORY) { launchSingleTop = true }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        WarmTopBar(
-            title = "English Tutor",
-            navigation = {
-                IconButton44(
-                    icon = painterResource(R.drawable.ic_settings),
-                    contentDescription = "Settings",
-                    onClick = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } },
-                    modifier = Modifier.testTag("settings_button")
-                )
-            },
-            subtitle = {
-                ProviderPill(
-                    activeProfile = activeProfile,
-                    enabledProfiles = enabledProfiles,
-                    onSelect = apiProfileViewModel::setActive,
-                    onManage = {
-                        navController.navigate(Route.API_PROFILES) { launchSingleTop = true }
-                    }
-                )
-            },
-            actions = {
-                IconButton44(
-                    icon = painterResource(R.drawable.ic_plus),
-                    contentDescription = "New session",
-                    onClick = {
-                        recognizedText = ""
-                        recognitionError = null
-                        viewModel.startNewSession()
-                    },
-                    modifier = Modifier.testTag("new_session_button"),
-                    iconSize = 22.dp
-                )
-                IconButton44(
-                    icon = painterResource(R.drawable.ic_history),
-                    contentDescription = "History",
-                    onClick = { navController.navigate(Route.HISTORY) { launchSingleTop = true } }
-                )
-            }
-        )
+        if (inConversation) {
+            ChatTopBar(
+                exchangeCount = history.size,
+                onBack = openEmptySession,
+                onNewSession = openEmptySession,
+                onHistory = openHistory
+            )
+        } else {
+            WarmTopBar(
+                title = "English Tutor",
+                navigation = {
+                    IconButton44(
+                        icon = painterResource(R.drawable.ic_settings),
+                        contentDescription = "Settings",
+                        onClick = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } },
+                        modifier = Modifier.testTag("settings_button")
+                    )
+                },
+                subtitle = {
+                    ProviderPill(
+                        activeProfile = activeProfile,
+                        enabledProfiles = enabledProfiles,
+                        onSelect = apiProfileViewModel::setActive,
+                        onManage = {
+                            navController.navigate(Route.API_PROFILES) { launchSingleTop = true }
+                        }
+                    )
+                },
+                actions = { ChatBarActions(onNewSession = openEmptySession, onHistory = openHistory) }
+            )
+        }
 
-        // The uniform 16dp inset the Scaffold body used to carry now belongs to the
-        // content: the topic list owns the design's 26/18/9 padding, and the message
-        // stream gets its own in the next pass.
-        Column(
+        Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                if (history.isEmpty() && recognizedText.isEmpty()) {
-                    if (isProcessing) {
-                        // The tutor is preparing its opening line for a tapped topic.
-                        CircularProgressIndicator()
+            if (!inConversation) {
+                if (isProcessing) {
+                    // The tutor is preparing its opening line for a tapped topic.
+                    ThinkingIndicator(modifier = Modifier.align(Alignment.Center))
+                } else {
+                    TopicSuggestions(
+                        topics = topics,
+                        isLoading = topicsLoading,
+                        error = topicsError,
+                        onTopicClick = viewModel::startTopic,
+                        onRefresh = topicsViewModel::refresh
+                    )
+                }
+            } else {
+                MessageStream(
+                    messages = history,
+                    interimUserText = recognizedText,
+                    isProcessing = isProcessing
+                )
+            }
+        }
+
+        if (error != null) {
+            ChatErrorText(text = error ?: "")
+        }
+        if (recognitionError != null) {
+            ChatErrorText(text = recognitionError ?: "")
+        }
+
+        MicDock(
+            size = if (inConversation) 76.dp else 88.dp,
+            iconSize = if (inConversation) 30.dp else 34.dp,
+            elevation = if (inConversation) ShadowMd else ShadowLg,
+            isRecording = isRecording,
+            label = if (isRecording) "Listening…" else "Tap to speak",
+            onClick = {
+                if (recordAudioPermission.status.isGranted) {
+                    recognitionError = null
+                    if (isRecording) {
+                        speechRecognizer.stopListening()
+                        viewModel.setRecordingState(false)
                     } else {
-                        TopicSuggestions(
-                            topics = topics,
-                            isLoading = topicsLoading,
-                            error = topicsError,
-                            onTopicClick = viewModel::startTopic,
-                            onRefresh = topicsViewModel::refresh
-                        )
+                        recognizedText = ""
+                        viewModel.setRecordingState(true)
+                        speechRecognizer.startListening(intent)
                     }
                 } else {
-                    val listState = rememberLazyListState()
-                    val trailingItemCount =
-                        (if (recognizedText.isNotEmpty()) 1 else 0) + (if (isProcessing) 1 else 0)
-                    val totalItemCount = history.size + trailingItemCount
-
-                    // Keep the newest turn (or the in-flight interim bubble/spinner) in view.
-                    LaunchedEffect(totalItemCount) {
-                        if (totalItemCount > 0) listState.animateScrollToItem(totalItemCount - 1)
-                    }
-
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(history, key = { it.id }) { message ->
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                // A topic-opener turn has no learner utterance, so it
-                                // shows only the tutor's bubble.
-                                if (message.userText.isNotBlank()) {
-                                    ChatBubble(text = message.userText, isUser = true)
-                                }
-                                ChatBubble(
-                                    text = message.aiResponse,
-                                    grammarCorrection = message.grammarCorrection,
-                                    isUser = false
-                                )
-                            }
-                        }
-                        if (recognizedText.isNotEmpty()) {
-                            item(key = "interim_user_text") {
-                                ChatBubble(text = recognizedText, isUser = true)
-                            }
-                        }
-                        if (isProcessing) {
-                            item(key = "processing_indicator") {
-                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
-                            }
-                        }
-                    }
+                    recordAudioPermission.launchPermissionRequest()
                 }
-            }
+            },
+            buttonModifier = Modifier.testTag("microphone_button")
+        )
+    }
+}
 
-            if (error != null) {
-                Text(text = error ?: "", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
-            }
-            if (recognitionError != null) {
-                Text(text = recognitionError ?: "", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(bottom = 8.dp))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            FloatingActionButton(
-                onClick = {
-                    if (recordAudioPermission.status.isGranted) {
-                        recognitionError = null
-                        if (isRecording) {
-                            speechRecognizer.stopListening()
-                            viewModel.setRecordingState(false)
-                        } else {
-                            recognizedText = ""
-                            viewModel.setRecordingState(true)
-                            speechRecognizer.startListening(intent)
-                        }
-                    } else {
-                        recordAudioPermission.launchPermissionRequest()
-                    }
-                },
-                modifier = Modifier
-                    .size(80.dp)
-                    .testTag("microphone_button"),
-                shape = CircleShape,
-                containerColor = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Mic, contentDescription = "Microphone", modifier = Modifier.size(36.dp))
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = if (isRecording) "Listening..." else "Tap to speak",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+/**
+ * The bar shown while a conversation is on screen: back, the session's name, the
+ * turn count, and the same two actions the topic list carries.
+ *
+ * Visible to the module so the screenshot specimens can render it; it holds no
+ * state of its own.
+ *
+ * @param exchangeCount stored turns in the current session, from
+ *   `ChatViewModel.sessionHistory`.
+ */
+@Composable
+internal fun ChatTopBar(
+    exchangeCount: Int,
+    onBack: () -> Unit,
+    onNewSession: () -> Unit,
+    onHistory: () -> Unit
+) {
+    WarmTopBar(
+        // The design puts the session's topic here, but nothing records it:
+        // ChatViewModel.startTopic() passes the topic straight into the prompt and
+        // neither ChatMessage nor ChatMessageEntity keeps it. The app's own name
+        // stands in until there is a real value to show.
+        title = "English Tutor",
+        titleStyle = MaterialTheme.typography.titleMedium,
+        navigation = {
+            IconButton44(
+                icon = painterResource(R.drawable.ic_arrow_left),
+                contentDescription = "Back to topics",
+                onClick = onBack
             )
+        },
+        subtitle = {
+            Pill(
+                // A topic opener counts as a turn, the same way the history screen
+                // counts it.
+                text = if (exchangeCount == 1) "1 exchange" else "$exchangeCount exchanges",
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                leadingDot = true,
+                dotColor = Accent2500
+            )
+        },
+        actions = { ChatBarActions(onNewSession = onNewSession, onHistory = onHistory) }
+    )
+}
+
+/** The trailing pair both bars carry, so it is written once rather than per branch. */
+@Composable
+private fun RowScope.ChatBarActions(onNewSession: () -> Unit, onHistory: () -> Unit) {
+    IconButton44(
+        icon = painterResource(R.drawable.ic_plus),
+        contentDescription = "New session",
+        onClick = onNewSession,
+        modifier = Modifier.testTag("new_session_button"),
+        iconSize = 22.dp
+    )
+    IconButton44(
+        icon = painterResource(R.drawable.ic_history),
+        contentDescription = "History",
+        onClick = onHistory
+    )
+}
+
+/**
+ * The conversation itself.
+ *
+ * Visible to the module (not private) for the same reason [TopicSuggestions] is:
+ * the screenshot specimens render it directly, and it takes plain values, so no
+ * ViewModel is involved.
+ *
+ * @param interimUserText what the recognizer has heard but the tutor has not
+ *   answered yet; empty when there is nothing in flight.
+ */
+@Composable
+internal fun MessageStream(
+    messages: List<ChatMessage>,
+    interimUserText: String,
+    isProcessing: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+    val trailingItemCount =
+        (if (interimUserText.isNotEmpty()) 1 else 0) + (if (isProcessing) 1 else 0)
+    val totalItemCount = messages.size + trailingItemCount
+
+    // Keep the newest turn (or the in-flight interim bubble/indicator) in view.
+    LaunchedEffect(totalItemCount) {
+        if (totalItemCount > 0) listState.animateScrollToItem(totalItemCount - 1)
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier.fillMaxSize(),
+        // `padding: var(--space-4) var(--space-4) var(--space-2)` on the scroller,
+        // so the inset scrolls with the messages instead of clipping them.
+        contentPadding = PaddingValues(
+            start = MessageStreamInset,
+            end = MessageStreamInset,
+            top = MessageStreamInset,
+            bottom = 9.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(TurnGap)
+    ) {
+        items(messages, key = { it.id }) { message ->
+            Column(verticalArrangement = Arrangement.spacedBy(WithinTurnGap)) {
+                // A topic-opener turn has no learner utterance, so it shows only
+                // the tutor's bubble.
+                if (message.userText.isNotBlank()) {
+                    ChatBubble(text = message.userText, isUser = true)
+                }
+                ChatBubble(
+                    text = message.aiResponse,
+                    grammarCorrection = message.grammarCorrection,
+                    isUser = false
+                )
+            }
+        }
+        if (interimUserText.isNotEmpty()) {
+            item(key = "interim_user_text") {
+                ChatBubble(text = interimUserText, isUser = true)
+            }
+        }
+        if (isProcessing) {
+            item(key = "processing_indicator") { ThinkingIndicator() }
         }
     }
+}
+
+@Composable
+private fun ChatErrorText(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.error,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = MessageStreamInset)
+            .padding(bottom = 8.dp)
+    )
 }
 
 /** `--radius-lg` — the card radius the handoff's rounded-frame override lands on. */
 private val TopicCardShape = RoundedCornerShape(28.dp)
 
-/** `--shadow-sm` (`0 1 2` @14%) approximated as a Compose elevation. */
-private val TopicCardElevation = 2.dp
+/**
+ * The three shadow tokens as Compose elevations: `--shadow-sm` (`0 1 2` @14%),
+ * `--shadow-md` (`0 3 10` @16%) and `--shadow-lg` (`0 12 32` @22%). Cards and
+ * bubbles all take the small one — without it they read as untinted text on the
+ * background, since neutral-100 and the page background are a shade apart.
+ */
+private val ShadowSm = 2.dp
+private val ShadowMd = 6.dp
+private val ShadowLg = 16.dp
+
+/** `padding: var(--space-4) …` on the message scroller, and its two gap sizes. */
+private val MessageStreamInset = 18.dp
+private val TurnGap = 18.dp
+private val WithinTurnGap = 8.dp
 
 /** Placeholder cards shown while the request is in flight. */
 private const val SkeletonCardCount = 3
@@ -427,7 +542,7 @@ private fun TopicCard(index: Int, topic: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(TopicCardElevation, TopicCardShape)
+            .shadow(ShadowSm, TopicCardShape)
             .background(
                 color = if (pressed) {
                     MaterialTheme.colorScheme.primaryContainer
@@ -509,46 +624,182 @@ private fun RefreshTopicsButton(
     }
 }
 
+/** `border-radius: 22px 22px 6px 22px` — the corner nearest the speaker is clipped. */
+private val UserBubbleShape =
+    RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp, bottomEnd = 6.dp, bottomStart = 22.dp)
+
+/** `border-radius: 6px 22px 22px 22px`. */
+private val TutorBubbleShape =
+    RoundedCornerShape(topStart = 6.dp, topEnd = 22.dp, bottomEnd = 22.dp, bottomStart = 22.dp)
+
+/**
+ * One side of a turn.
+ *
+ * The learner gets a bare right-aligned bubble; the tutor gets a labelled block —
+ * avatar, "TUTOR" tag and a read-aloud button above the bubble, with the optional
+ * "TRY SAYING" card under it. [grammarCorrection] is the tutor's, so it is ignored
+ * when [isUser] is true, and the whole card is dropped when the model returned
+ * nothing worth correcting.
+ *
+ * The signature is fixed: ThemeScreenshotTest renders this directly.
+ */
 @Composable
 fun ChatBubble(text: String, isUser: Boolean, grammarCorrection: String? = null) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = if (isUser) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer,
-            modifier = Modifier.padding(vertical = 4.dp).widthIn(max = 300.dp)
-        ) {
+    // `max-width` is a percentage of the stream's width, so it needs the incoming
+    // constraint; a fillMaxWidth fraction would stretch short messages instead.
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val availableWidth = maxWidth
+        if (isUser) {
             Text(
                 text = text,
-                modifier = Modifier.padding(16.dp),
-                color = if (isUser) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSecondaryContainer,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                // `line-height: 1.5` on the 15sp learner text, against 1.55 for the
+                // tutor's — the design tightens the shorter of the two.
+                lineHeight = 22.5.sp,
+                color = Accent100,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .widthIn(max = availableWidth * 0.82f)
+                    .shadow(ShadowSm, UserBubbleShape)
+                    .background(MaterialTheme.colorScheme.primary, UserBubbleShape)
+                    .padding(horizontal = 16.dp, vertical = 13.dp)
             )
-        }
-
-        if (!isUser && !grammarCorrection.isNullOrEmpty()) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.errorContainer,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp).widthIn(max = 300.dp)
+        } else {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .widthIn(max = availableWidth * 0.86f),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Grammar Correction",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = grammarCorrection,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                TutorLabel(text = text)
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyLarge,
+                    lineHeight = 23.25.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .shadow(ShadowSm, TutorBubbleShape)
+                        .background(MaterialTheme.colorScheme.surface, TutorBubbleShape)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                )
+                if (!grammarCorrection.isNullOrEmpty()) {
+                    TrySayingCard(correction = grammarCorrection)
                 }
             }
+        }
+    }
+}
+
+/** The tutor's byline: who is speaking, and a button to hear it again. */
+@Composable
+private fun TutorLabel(text: String) {
+    Row(
+        modifier = Modifier.padding(start = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        AvatarBadge(
+            letter = "T",
+            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            size = 20.dp
+        )
+        Text(
+            text = "Tutor".uppercase(Locale.US),
+            style = MaterialTheme.typography.labelSmall,
+            color = Neutral600
+        )
+        // The reply is spoken once when it arrives (ChatViewModel.speakEvent); this
+        // replays it. TtsManager is the single sanctioned entry point for playback,
+        // so it can be called without threading a callback through the fixed
+        // signature of [ChatBubble].
+        IconButton44(
+            icon = painterResource(R.drawable.ic_volume),
+            contentDescription = "Play again",
+            onClick = { TtsManager.speak(text) },
+            iconSize = 14.dp,
+            tint = Neutral500,
+            size = 24.dp
+        )
+    }
+}
+
+/**
+ * The grammar note under a tutor reply. The handoff reframes it from a red error
+ * ("Grammar Correction") into a green suggestion, so it uses the olive ramp rather
+ * than the theme's error colors.
+ */
+@Composable
+private fun TrySayingCard(correction: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Accent2100, MaterialTheme.shapes.medium)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_lightbulb),
+            contentDescription = null,
+            tint = Accent2600,
+            // `margin-top: 2px` — optically centres the bulb on the first line.
+            modifier = Modifier.padding(top = 2.dp).size(16.dp)
+        )
+        Column {
+            Text(
+                text = "Try saying".uppercase(Locale.US),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Accent2700
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = correction,
+                style = MaterialTheme.typography.bodyMedium,
+                lineHeight = 21.sp,
+                color = Accent2900
+            )
+        }
+    }
+}
+
+/** `height: 26px` on the bar track; the bars swing between 22% and 100% of it. */
+private val ThinkingTrackHeight = 26.dp
+
+/**
+ * The tutor composing a reply: `@keyframes bar` — three 5dp bars easing between 22%
+ * and 100% of the track over 0.9s, each starting 150ms after the one before.
+ * Replaces the spinner the screen used in both of its waiting states.
+ */
+@Composable
+private fun ThinkingIndicator(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "thinking")
+    Row(
+        modifier = modifier
+            .padding(start = 8.dp)
+            .height(ThinkingTrackHeight)
+            .semantics { contentDescription = "Tutor is replying" },
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        repeat(3) { index ->
+            // Half the CSS cycle each way: 450ms out, 450ms back.
+            val heightFraction by transition.animateFloat(
+                initialValue = 0.22f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(450, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                    initialStartOffset = StartOffset(index * 150)
+                ),
+                label = "thinking_bar_$index"
+            )
+            Box(
+                modifier = Modifier
+                    .width(5.dp)
+                    .height(ThinkingTrackHeight * heightFraction)
+                    .background(Accent400, CircleShape)
+            )
         }
     }
 }

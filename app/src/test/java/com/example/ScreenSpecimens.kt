@@ -2,6 +2,7 @@ package com.example
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -10,7 +11,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.ApiSpec
+import com.example.ui.ChatMessage
+import com.example.ui.ChatTopBar
 import com.example.ui.IconButton44
+import com.example.ui.MessageStream
+import com.example.ui.MicDock
 import com.example.ui.ProviderPill
 import com.example.ui.TopicSuggestions
 import com.example.ui.WarmTopBar
@@ -103,4 +108,72 @@ internal val SpecimenTopics =
         "Your weekend plans",
         "A skill you are learning right now",
         "Street food you miss",
+    )
+
+/**
+ * The chat screen mid-conversation: the chat top bar over [MessageStream], with the
+ * dock underneath at its conversation size.
+ *
+ * The mic dock is drawn idle on purpose. Both the recording pulse and the thinking
+ * indicator are infinite animations, which never let the compose rule go idle, so a
+ * capture of either would hang rather than settle.
+ */
+@Composable
+internal fun ChatSpecimen(messages: List<ChatMessage> = SpecimenTurns) {
+    Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        ChatTopBar(
+            exchangeCount = messages.size,
+            onBack = {},
+            onNewSession = {},
+            onHistory = {},
+        )
+        MessageStream(
+            messages = messages,
+            interimUserText = "",
+            isProcessing = false,
+            modifier = Modifier.weight(1f),
+        )
+        MicDock(
+            size = 76.dp,
+            iconSize = 30.dp,
+            elevation = 6.dp,
+            isRecording = false,
+            label = "Tap to speak",
+            onClick = {},
+        )
+    }
+}
+
+/**
+ * Three turns, shaped like the ones the tutor actually produces: an opener with no
+ * learner utterance and no correction, then a turn with both halves and no
+ * correction, then one carrying a correction. Sentences are fixtures chosen to
+ * exercise wrapping — real text comes from the model via [com.example.ui.ChatViewModel].
+ */
+internal val SpecimenTurns =
+    listOf(
+        ChatMessage(
+            id = "turn-1",
+            sessionId = "specimen",
+            userText = "",
+            aiResponse =
+                "Let's practise together. What is one thing you did today that you enjoyed?",
+            grammarCorrection = null,
+        ),
+        ChatMessage(
+            id = "turn-2",
+            sessionId = "specimen",
+            userText = "I cooked lunch for my family.",
+            aiResponse = "That sounds lovely. What did you make for them?",
+            grammarCorrection = null,
+        ),
+        ChatMessage(
+            id = "turn-3",
+            sessionId = "specimen",
+            userText = "We eat noodles and after we watch a film together.",
+            aiResponse =
+                "Noodles and a film is a good combination. Which film did you choose?",
+            grammarCorrection =
+                "Past tense here: \"we ate noodles, and afterwards we watched a film.\"",
+        ),
     )

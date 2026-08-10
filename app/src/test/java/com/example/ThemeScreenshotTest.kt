@@ -74,6 +74,11 @@ class ThemeScreenshotTest {
     @Config(qualifiers = HandoffCanvasQualifier)
     fun home_initial() = capture("home_initial") { HomeSpecimen() }
 
+    /** The other half of the same destination: bar, message stream and dock. */
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun chat_conversation() = capture("chat_conversation") { ChatSpecimen() }
+
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no
      * ViewModel, so it can be rendered directly. Covers all three variants:

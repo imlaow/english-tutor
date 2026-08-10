@@ -163,7 +163,9 @@ class ChatViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: MissingApiKeyException) {
-                _error.value = "Add your API key in Settings (gear icon, top-left) to start chatting."
+                // No landmark in the wording: this fires mid-conversation, where the
+                // top bar shows back/new/history and no gear at all.
+                _error.value = "Add your API key in Settings to start chatting."
                 _isProcessing.value = false
             } catch (e: Exception) {
                 _error.value = "Couldn't reach your AI tutor. Please check your connection and try again."
@@ -203,7 +205,9 @@ class ChatViewModel(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: MissingApiKeyException) {
-                _error.value = "Add your API key in Settings (gear icon, top-left) to start chatting."
+                // No landmark in the wording: this fires mid-conversation, where the
+                // top bar shows back/new/history and no gear at all.
+                _error.value = "Add your API key in Settings to start chatting."
                 _isProcessing.value = false
             } catch (e: Exception) {
                 _error.value = "Couldn't reach your AI tutor. Please check your connection and try again."

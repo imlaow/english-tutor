@@ -137,6 +137,10 @@ fun WarmTopBar(
  *
  * @param iconSize the design varies this per glyph: 21 for the gear, history and
  *   back arrows, 22 for the plus, 20 for the trash.
+ * @param size 44 everywhere in the top bars. The design reuses the same circle —
+ *   transparent until pressed, then accent-200 — at smaller diameters inside the
+ *   content: 24 for the tutor's read-aloud button, 26 for the history card's
+ *   delete button.
  */
 @Composable
 fun IconButton44(
@@ -146,13 +150,14 @@ fun IconButton44(
   modifier: Modifier = Modifier,
   iconSize: Dp = 21.dp,
   tint: Color = Neutral800,
+  size: Dp = 44.dp,
 ) {
   val interactionSource = remember { MutableInteractionSource() }
   val pressed by interactionSource.collectIsPressedAsState()
   Box(
     modifier =
       modifier
-        .size(44.dp)
+        .size(size)
         .clip(CircleShape)
         .background(if (pressed) Accent200 else Color.Transparent)
         .clickable(
@@ -182,6 +187,8 @@ fun IconButton44(
  * @param elevation `--shadow-lg` ≈ 16dp on Home, `--shadow-md` ≈ 6dp on Chat.
  * @param label the visible caption; also the button's accessibility description,
  *   so the copy stays owned by the caller.
+ * @param buttonModifier applied to the record button itself rather than the dock,
+ *   so a caller's test tag lands on the thing that is tapped.
  */
 @Composable
 fun MicDock(
@@ -191,6 +198,7 @@ fun MicDock(
   label: String,
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
+  buttonModifier: Modifier = Modifier,
   elevation: Dp = 16.dp,
 ) {
   // The design's 26dp bottom gap already stands in for the home indicator, so the
@@ -212,7 +220,7 @@ fun MicDock(
       if (isRecording) PulseRing()
       Box(
         modifier =
-          Modifier
+          buttonModifier
             .fillMaxSize()
             .shadow(elevation, CircleShape)
             .background(if (isRecording) Accent700 else Accent500, CircleShape)
