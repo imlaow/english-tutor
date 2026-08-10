@@ -49,6 +49,31 @@ class ThemeScreenshotTest {
 
     @Test fun chatBubbles_light() = capture("chat_bubbles_light") { ChatBubbles() }
 
+    // The chat screen's empty state, one capture per branch of TopicSuggestions.
+    // These override the class's Pixel 8 qualifier with the handoff's own 393dp
+    // canvas, so a capture can be laid straight over export_1-home-1080x2400.png
+    // instead of being 18dp wider than the drawing.
+
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun home_topics() = capture("home_topics") { HomeSpecimen(topics = SpecimenTopics) }
+
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun home_loading() = capture("home_loading") { HomeSpecimen(isLoading = true) }
+
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun home_error() = capture("home_error") {
+        // The wording a missing key produces in TopicsViewModel; the screen prints
+        // whatever the view model hands it, so this is the real string.
+        HomeSpecimen(error = "Add an API provider in Settings to see topic suggestions.")
+    }
+
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun home_initial() = capture("home_initial") { HomeSpecimen() }
+
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no
      * ViewModel, so it can be rendered directly. Covers all three variants:

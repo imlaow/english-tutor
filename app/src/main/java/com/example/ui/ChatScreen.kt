@@ -8,35 +8,47 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.example.R
 import com.example.manager.TtsManager
+import com.example.ui.theme.Accent100
+import com.example.ui.theme.Accent2700
+import com.example.ui.theme.Accent700
+import com.example.ui.theme.Accent800
+import com.example.ui.theme.Neutral200
+import com.example.ui.theme.Neutral500
+import com.example.ui.theme.Neutral600
+import com.example.ui.theme.SectionKicker
 import com.example.viewmodel.ApiProfileViewModel
 import com.example.viewmodel.TopicsViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -44,7 +56,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import java.util.*
 
-@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
@@ -126,57 +138,60 @@ fun ChatScreen(
         if (history.isNotEmpty()) recognizedText = ""
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    ProviderSelector(
-                        title = "English Tutor",
-                        activeProfile = activeProfile,
-                        enabledProfiles = enabledProfiles,
-                        onSelect = apiProfileViewModel::setActive,
-                        onManage = {
-                            navController.navigate(Route.API_PROFILES) { launchSingleTop = true }
-                        }
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } },
-                        modifier = Modifier.testTag("settings_button")
-                    ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            recognizedText = ""
-                            recognitionError = null
-                            viewModel.startNewSession()
-                        },
-                        modifier = Modifier.testTag("new_session_button")
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "New session")
-                    }
-                    IconButton(onClick = { navController.navigate(Route.HISTORY) { launchSingleTop = true } }) {
-                        Icon(Icons.Default.History, contentDescription = "History")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        WarmTopBar(
+            title = "English Tutor",
+            navigation = {
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_settings),
+                    contentDescription = "Settings",
+                    onClick = { navController.navigate(Route.SETTINGS) { launchSingleTop = true } },
+                    modifier = Modifier.testTag("settings_button")
                 )
-            )
-        }
-    ) { paddingValues ->
+            },
+            subtitle = {
+                ProviderPill(
+                    activeProfile = activeProfile,
+                    enabledProfiles = enabledProfiles,
+                    onSelect = apiProfileViewModel::setActive,
+                    onManage = {
+                        navController.navigate(Route.API_PROFILES) { launchSingleTop = true }
+                    }
+                )
+            },
+            actions = {
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_plus),
+                    contentDescription = "New session",
+                    onClick = {
+                        recognizedText = ""
+                        recognitionError = null
+                        viewModel.startNewSession()
+                    },
+                    modifier = Modifier.testTag("new_session_button"),
+                    iconSize = 22.dp
+                )
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_history),
+                    contentDescription = "History",
+                    onClick = { navController.navigate(Route.HISTORY) { launchSingleTop = true } }
+                )
+            }
+        )
+
+        // The uniform 16dp inset the Scaffold body used to carry now belongs to the
+        // content: the topic list owns the design's 26/18/9 padding, and the message
+        // stream gets its own in the next pass.
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
+                .weight(1f)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
@@ -289,8 +304,22 @@ fun ChatScreen(
     }
 }
 
+/** `--radius-lg` — the card radius the handoff's rounded-frame override lands on. */
+private val TopicCardShape = RoundedCornerShape(28.dp)
+
+/** `--shadow-sm` (`0 1 2` @14%) approximated as a Compose elevation. */
+private val TopicCardElevation = 2.dp
+
+/** Placeholder cards shown while the request is in flight. */
+private const val SkeletonCardCount = 3
+
+/**
+ * Visible to the module (not private) so the screenshot specimens can render all
+ * four of its states directly, the same way [ChatBubble] is rendered there. It
+ * takes plain values and lambdas, so no ViewModel is needed to drive it.
+ */
 @Composable
-private fun TopicSuggestions(
+internal fun TopicSuggestions(
     topics: List<String>,
     isLoading: Boolean,
     error: String?,
@@ -298,74 +327,185 @@ private fun TopicSuggestions(
     onRefresh: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 9.dp)
     ) {
         when {
             topics.isNotEmpty() -> {
-                Text(
-                    text = "Try one of these topics:",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                TopicsHeader()
                 topics.forEachIndexed { index, topic ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("topic_card_$index")
-                            .clickable { onTopicClick(topic) }
-                    ) {
-                        Text(
-                            text = topic,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                    if (index > 0) Spacer(modifier = Modifier.height(10.dp))
+                    TopicCard(index = index, topic = topic, onClick = { onTopicClick(topic) })
                 }
             }
+            // The handoff only draws the loaded state. Skeletons in the shape of the
+            // cards keep the layout from jumping once the topics land.
             isLoading -> {
-                CircularProgressIndicator()
+                TopicsHeader()
+                repeat(SkeletonCardCount) { index ->
+                    if (index > 0) Spacer(modifier = Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .background(Neutral200, TopicCardShape)
+                    )
+                }
+                Spacer(modifier = Modifier.height(13.dp))
                 Text(
                     text = "Finding topics for you…",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Neutral600,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
+            // The message is whatever the ViewModel reported (a missing key, a failed
+            // call); it is shown verbatim rather than restated here. The header stays
+            // for the same reason it does while loading: a failed refresh should not
+            // shift the rest of the screen up.
             error != null -> {
+                TopicsHeader()
                 Text(
                     text = error,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    color = Accent800,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Accent100, TopicCardShape)
+                        .padding(18.dp)
                 )
             }
             else -> {
                 Text(
                     text = "Tap the microphone to start speaking.",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
+        Spacer(modifier = Modifier.height(18.dp))
         // Available after the first load so the learner can retry an error or ask
         // for a different set; disabled mid-request to avoid overlapping calls.
-        TextButton(
+        RefreshTopicsButton(
+            isLoading = isLoading,
             onClick = onRefresh,
-            enabled = !isLoading,
-            modifier = Modifier.testTag("refresh_topics_button")
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Refresh")
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+    }
+}
+
+@Composable
+private fun TopicsHeader() {
+    Text(
+        text = "Suggested for you".uppercase(Locale.US),
+        style = SectionKicker,
+        color = Accent2700
+    )
+    Spacer(modifier = Modifier.height(6.dp))
+    Text(
+        text = "Try one of these",
+        style = MaterialTheme.typography.headlineMedium,
+        color = MaterialTheme.colorScheme.onBackground
+    )
+    Spacer(modifier = Modifier.height(18.dp))
+}
+
+/**
+ * One suggestion row. The number badge is the card's position in the list, not part
+ * of the topic itself, so it counts from the `forEachIndexed` index.
+ */
+@Composable
+private fun TopicCard(index: Int, topic: String, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(TopicCardElevation, TopicCardShape)
+            .background(
+                color = if (pressed) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                shape = TopicCardShape
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 16.dp)
+            .testTag("topic_card_$index"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(13.dp)
+    ) {
+        AvatarBadge(
+            letter = "${index + 1}",
+            backgroundColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            size = 28.dp,
+            fontSize = 12.sp
+        )
+        Text(
+            text = topic,
+            style = MaterialTheme.typography.titleSmall,
+            // `line-height: 1.35` on the 16sp card title, tighter than the 1.55 body default.
+            lineHeight = 21.6.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_chevron_right),
+            contentDescription = null,
+            tint = Neutral500,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}
+
+@Composable
+private fun RefreshTopicsButton(
+    isLoading: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(CircleShape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .clickable(enabled = !isLoading, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .testTag("refresh_topics_button"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = Accent700
+            )
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_refresh),
+                contentDescription = null,
+                tint = Accent700,
+                modifier = Modifier.size(16.dp)
+            )
         }
+        Text(
+            text = "Refresh topics",
+            style = MaterialTheme.typography.labelLarge,
+            color = Accent700
+        )
     }
 }
 
