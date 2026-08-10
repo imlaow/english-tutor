@@ -2,12 +2,13 @@
 .gradle
 .kotlin
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+
+# IDE state. Tracked until 2026-08-10 — it churns on every IDE action, and
+# deploymentTargetSelector.xml even stored an ADB endpoint.
+.idea/
+
+# Local simulation state for `wrangler r2` and friends.
+.wrangler/
 .DS_Store
 /build
 /captures
