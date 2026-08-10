@@ -1,0 +1,32 @@
+<!-- Lucide `ellipsis-vertical`, drawn to the handoff's icon spec (viewBox 24,
+     stroke-width 2.75, round caps/joins, no fill) rather than traced from a screen:
+     the four designed screens have no overflow menu, the API-profile list does.
+     The three r=1 <circle>s are written as arc pairs, which is what a vector
+     drawable can express. Stroke color is a placeholder: every use site tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M13,5 A1,1 0 0,1 11,5 A1,1 0 0,1 13,5 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF201E1D"
+        android:strokeWidth="2.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M13,12 A1,1 0 0,1 11,12 A1,1 0 0,1 13,12 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF201E1D"
+        android:strokeWidth="2.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M13,19 A1,1 0 0,1 11,19 A1,1 0 0,1 13,19 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF201E1D"
+        android:strokeWidth="2.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

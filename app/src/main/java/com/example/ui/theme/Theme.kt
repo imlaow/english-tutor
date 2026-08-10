@@ -57,7 +57,16 @@ private val WarmColorScheme =
     errorContainer = Accent200,
     onErrorContainer = Accent800,
 
-    outline = Neutral400,
+    // Neutral-600, not the neutral-400 the handoff draws its hairlines with.
+    // `outline` is the unfocused border of every OutlinedTextField, and the four
+    // screens with no design are nothing but forms, so it has to clear the 3:1
+    // WCAG floor for a UI component boundary. Measured against the surfaces it is
+    // actually drawn on: neutral-400 gives 1.68:1 on the background (#f5ead8),
+    // 1.83:1 on a card (#f9f4ed); neutral-500 only reaches 2.42:1 / 2.63:1;
+    // neutral-600 is the first step on the ramp that passes — 3.61:1 and 3.92:1
+    // (3.21:1 on the top bar's #ebddc5). The hairlines the design does specify
+    // are `outlineVariant`, which keeps the handoff's own divider value.
+    outline = Neutral600,
     outlineVariant = WarmDivider,
   )
 

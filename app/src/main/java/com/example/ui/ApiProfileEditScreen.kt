@@ -1,34 +1,28 @@
 package com.example.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,11 +30,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.R
 import com.example.data.remote.ProbeOutcome
+import com.example.data.settings.ApiProfile
 import com.example.data.settings.ApiSpec
 import com.example.data.settings.defaultBaseUrl
 import com.example.data.settings.defaultModel
@@ -54,7 +51,6 @@ import com.example.viewmodel.ConnectionTestState
  * spec picker only swaps the placeholders, since one profile holds exactly one
  * base URL / key / model.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ApiProfileEditScreen(
     viewModel: ApiProfileViewModel,
@@ -67,42 +63,86 @@ fun ApiProfileEditScreen(
     val formError by viewModel.formError.collectAsState()
     val connectionTest by viewModel.connectionTest.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (profileId == null) "New provider" else "Edit provider",
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.safePopBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    ApiProfileEditContent(
+        profile = draft,
+        isNewProfile = profileId == null,
+        formError = formError,
+        connectionTest = connectionTest,
+        onBack = { navController.safePopBackStack() },
+        onNameChange = { value -> viewModel.updateDraft { it.copy(name = value) } },
+        onSpecChange = { spec -> viewModel.updateSpec(spec) },
+        onBaseUrlChange = { value -> viewModel.updateDraft { it.copy(baseUrl = value) } },
+        onApiKeyChange = { value -> viewModel.updateDraft { it.copy(apiKey = value) } },
+        onModelChange = { value -> viewModel.updateDraft { it.copy(model = value) } },
+        onEnabledChange = { value -> viewModel.updateDraft { it.copy(enabled = value) } },
+        onTestConnection = { viewModel.testConnection() },
+        onSave = { viewModel.save(onSaved = { navController.safePopBackStack() }) }
+    )
+}
+
+/**
+ * The form without its ViewModel: the warm top bar over the profile's fields.
+ *
+ * Visible to the module (not private) for the same reason [SettingsContent] is —
+ * the screenshot specimens render it directly, and it takes plain values and
+ * lambdas.
+ *
+ * This screen has no design in the handoff, so only the shell follows it: the
+ * warm top bar and its 44dp icon button. The fields are stock Material.
+ *
+ * @param profile null only while an existing profile is being read back from
+ *   Room; the bar stays up and the fields are simply absent until it arrives,
+ *   rather than flashing blank values over the stored ones.
+ * @param isNewProfile only decides the title; the form itself is the same either
+ *   way, since a new profile is an unsaved [ApiProfile] with the spec defaults.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ApiProfileEditContent(
+    profile: ApiProfile?,
+    isNewProfile: Boolean,
+    formError: ApiProfileFormError?,
+    connectionTest: ConnectionTestState,
+    onBack: () -> Unit,
+    onNameChange: (String) -> Unit,
+    onSpecChange: (ApiSpec) -> Unit,
+    onBaseUrlChange: (String) -> Unit,
+    onApiKeyChange: (String) -> Unit,
+    onModelChange: (String) -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    onTestConnection: () -> Unit,
+    onSave: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        WarmTopBar(
+            title = if (isNewProfile) "New provider" else "Edit provider",
+            navigation = {
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_arrow_left),
+                    contentDescription = "Back",
+                    onClick = onBack
                 )
-            )
-        }
-    ) { paddingValues ->
-        // Null only while an existing profile is being read back from Room.
-        val profile = draft ?: return@Scaffold
+            }
+        )
+
+        if (profile == null) return@Column
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+                .weight(1f)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
                 value = profile.name,
-                onValueChange = { value -> viewModel.updateDraft { it.copy(name = value) } },
+                onValueChange = onNameChange,
                 label = { Text("Name") },
                 supportingText = {
                     Text(
@@ -126,7 +166,7 @@ fun ApiProfileEditScreen(
                 ApiSpec.entries.forEachIndexed { index, spec ->
                     SegmentedButton(
                         selected = profile.apiSpec == spec,
-                        onClick = { viewModel.updateSpec(spec) },
+                        onClick = { onSpecChange(spec) },
                         shape = SegmentedButtonDefaults.itemShape(
                             index = index,
                             count = ApiSpec.entries.size
@@ -140,7 +180,7 @@ fun ApiProfileEditScreen(
 
             OutlinedTextField(
                 value = profile.baseUrl,
-                onValueChange = { value -> viewModel.updateDraft { it.copy(baseUrl = value) } },
+                onValueChange = onBaseUrlChange,
                 label = { Text("Base URL") },
                 placeholder = { Text(profile.apiSpec.defaultBaseUrl) },
                 supportingText = {
@@ -158,7 +198,7 @@ fun ApiProfileEditScreen(
 
             OutlinedTextField(
                 value = profile.apiKey,
-                onValueChange = { value -> viewModel.updateDraft { it.copy(apiKey = value) } },
+                onValueChange = onApiKeyChange,
                 label = { Text("API key") },
                 supportingText = {
                     Text(
@@ -175,7 +215,7 @@ fun ApiProfileEditScreen(
 
             OutlinedTextField(
                 value = profile.model,
-                onValueChange = { value -> viewModel.updateDraft { it.copy(model = value) } },
+                onValueChange = onModelChange,
                 label = { Text("Model") },
                 placeholder = { Text(profile.apiSpec.defaultModel) },
                 supportingText = { Text("Leave empty to use the default.") },
@@ -198,15 +238,13 @@ fun ApiProfileEditScreen(
                 }
                 Switch(
                     checked = profile.enabled,
-                    onCheckedChange = { value ->
-                        viewModel.updateDraft { it.copy(enabled = value) }
-                    },
+                    onCheckedChange = onEnabledChange,
                     modifier = Modifier.testTag("profile_enabled_switch")
                 )
             }
 
             OutlinedButton(
-                onClick = { viewModel.testConnection() },
+                onClick = onTestConnection,
                 enabled = connectionTest !is ConnectionTestState.Running,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -235,7 +273,7 @@ fun ApiProfileEditScreen(
             }
 
             Button(
-                onClick = { viewModel.save(onSaved = { navController.safePopBackStack() }) },
+                onClick = onSave,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("save_settings_button")
@@ -254,8 +292,9 @@ fun ApiProfileEditScreen(
  */
 @Composable
 private fun ProbeResultRow(label: String, outcome: ProbeOutcome) {
+    val passed = outcome is ProbeOutcome.Success
     val color =
-        if (outcome is ProbeOutcome.Success) MaterialTheme.colorScheme.primary
+        if (passed) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.error
 
     Row(
@@ -263,9 +302,10 @@ private fun ProbeResultRow(label: String, outcome: ProbeOutcome) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Icon(
-            imageVector = if (outcome is ProbeOutcome.Success) Icons.Filled.Check
-            else Icons.Filled.Close,
-            contentDescription = if (outcome is ProbeOutcome.Success) "Passed" else "Failed",
+            painter = painterResource(
+                if (passed) R.drawable.ic_check else R.drawable.ic_close
+            ),
+            contentDescription = if (passed) "Passed" else "Failed",
             tint = color,
             modifier = Modifier.size(20.dp)
         )

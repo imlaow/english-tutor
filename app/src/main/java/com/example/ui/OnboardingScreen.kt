@@ -1,6 +1,8 @@
 package com.example.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -8,44 +10,40 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.R
+import com.example.viewmodel.OnboardingUiState
 import com.example.viewmodel.OnboardingViewModel
 
 private val ENGLISH_LEVELS = listOf(
     "Beginner", "Elementary", "Intermediate", "Upper-Intermediate", "Advanced"
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun OnboardingScreen(
     viewModel: OnboardingViewModel,
@@ -66,34 +64,72 @@ fun OnboardingScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Welcome", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(
-                        onClick = onOpenSettings,
-                        modifier = Modifier.testTag("onboarding_settings_button")
-                    ) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    Box(modifier = Modifier.fillMaxSize()) {
+        OnboardingContent(
+            uiState = uiState,
+            onOpenSettings = onOpenSettings,
+            onLevelChanged = viewModel::onLevelChanged,
+            onGoalChanged = viewModel::onGoalChanged,
+            onInterestsChanged = viewModel::onInterestsChanged,
+            onPracticeMinutesChanged = viewModel::onPracticeMinutesChanged,
+            onSubmit = viewModel::completeOnboarding
+        )
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+        )
+    }
+}
+
+/**
+ * The questionnaire without its ViewModel: the warm top bar over the form.
+ *
+ * Visible to the module (not private) for the same reason [SettingsContent] is —
+ * the screenshot specimens render it directly, and it takes plain values and
+ * lambdas. The snackbar stays outside, since it belongs to the ViewModel's error
+ * flow rather than to the layout.
+ *
+ * This screen has no design in the handoff, so only the shell follows it: the
+ * warm top bar and its 44dp icon button. The form below is stock Material.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+internal fun OnboardingContent(
+    uiState: OnboardingUiState,
+    onOpenSettings: () -> Unit,
+    onLevelChanged: (String) -> Unit,
+    onGoalChanged: (String) -> Unit,
+    onInterestsChanged: (String) -> Unit,
+    onPracticeMinutesChanged: (String) -> Unit,
+    onSubmit: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        WarmTopBar(
+            title = "Welcome",
+            actions = {
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_settings),
+                    contentDescription = "Settings",
+                    onClick = onOpenSettings,
+                    modifier = Modifier.testTag("onboarding_settings_button")
                 )
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
+            }
+        )
+
         val inputsEnabled = !uiState.isGeneratingProfile
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+                .weight(1f)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -118,7 +154,7 @@ fun OnboardingScreen(
                 ENGLISH_LEVELS.forEach { level ->
                     FilterChip(
                         selected = uiState.answers.selfAssessedLevel == level,
-                        onClick = { viewModel.onLevelChanged(level) },
+                        onClick = { onLevelChanged(level) },
                         enabled = inputsEnabled,
                         label = { Text(level) },
                         modifier = Modifier.testTag("level_chip_$level")
@@ -128,7 +164,7 @@ fun OnboardingScreen(
 
             OutlinedTextField(
                 value = uiState.answers.learningGoal,
-                onValueChange = viewModel::onGoalChanged,
+                onValueChange = onGoalChanged,
                 enabled = inputsEnabled,
                 label = { Text("What is your learning goal?") },
                 placeholder = { Text("e.g. Speak confidently at work") },
@@ -139,7 +175,7 @@ fun OnboardingScreen(
 
             OutlinedTextField(
                 value = uiState.answers.interests,
-                onValueChange = viewModel::onInterestsChanged,
+                onValueChange = onInterestsChanged,
                 enabled = inputsEnabled,
                 label = { Text("What topics interest you?") },
                 placeholder = { Text("e.g. Travel, movies, technology") },
@@ -150,7 +186,7 @@ fun OnboardingScreen(
 
             OutlinedTextField(
                 value = uiState.answers.dailyPracticeMinutes,
-                onValueChange = viewModel::onPracticeMinutesChanged,
+                onValueChange = onPracticeMinutesChanged,
                 enabled = inputsEnabled,
                 label = { Text("Minutes you can practice per day") },
                 placeholder = { Text("e.g. 30") },
@@ -164,7 +200,7 @@ fun OnboardingScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = viewModel::completeOnboarding,
+                onClick = onSubmit,
                 enabled = uiState.canSubmit,
                 modifier = Modifier
                     .fillMaxWidth()

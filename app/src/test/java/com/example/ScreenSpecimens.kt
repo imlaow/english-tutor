@@ -9,18 +9,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.data.remote.ConnectionTestResult
+import com.example.data.remote.ProbeOutcome
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.ApiSpec
+import com.example.ui.ApiProfileEditContent
+import com.example.ui.ApiProfileListContent
 import com.example.ui.ChatMessage
 import com.example.ui.ChatTopBar
 import com.example.ui.HistoryContent
 import com.example.ui.IconButton44
 import com.example.ui.MessageStream
 import com.example.ui.MicDock
+import com.example.ui.OnboardingContent
 import com.example.ui.ProviderPill
 import com.example.ui.SettingsContent
+import com.example.ui.TopicProviderContent
 import com.example.ui.TopicSuggestions
 import com.example.ui.WarmTopBar
+import com.example.viewmodel.ConnectionTestState
+import com.example.viewmodel.OnboardingAnswers
+import com.example.viewmodel.OnboardingUiState
 import java.util.GregorianCalendar
 
 /**
@@ -50,6 +59,20 @@ internal const val HandoffCanvasQualifier = "+w393dp-h873dp"
 
 private val SpecimenProfile =
     ApiProfile(id = "specimen", name = "Gemini Flash", apiSpec = ApiSpec.GEMINI)
+
+/**
+ * A second profile for the list and picker specimens, disabled so a capture shows
+ * both row states at once. Its model is left blank on purpose: the row then prints
+ * `effectiveModel`, which is the spec's own default constant rather than a name
+ * typed out here.
+ */
+private val SpecimenSecondProfile =
+    ApiProfile(
+        id = "specimen-2",
+        name = "Work account",
+        apiSpec = ApiSpec.OPENAI,
+        enabled = false,
+    )
 
 /**
  * The chat screen's empty state: the warm top bar over [TopicSuggestions].
@@ -185,6 +208,128 @@ internal fun SettingsSpecimen(
         onBack = {},
         onApiConfiguration = {},
         onTopicGeneration = {},
+    )
+}
+
+// ------------------------------------------------------------------------
+// The four screens the handoff never drew. Only their shell follows the design
+// — the warm top bar and its 44dp buttons — so these captures exist to pin that
+// shell and the Material form controls under it, not to be laid over an export.
+// They use the class-level Pixel 8 canvas rather than HandoffCanvasQualifier,
+// since there is no 393dp drawing to align with.
+
+/**
+ * The onboarding questionnaire, part-way through: a level picked and the first
+ * answer typed, so both the selected and unselected chip states are visible along
+ * with a filled and an empty text field.
+ *
+ * The answers are fixtures — the real ones are whatever the learner types into
+ * [com.example.viewmodel.OnboardingViewModel].
+ */
+@Composable
+internal fun OnboardingSpecimen(
+    uiState: OnboardingUiState =
+        OnboardingUiState(
+            answers =
+                OnboardingAnswers(
+                    selfAssessedLevel = "Intermediate",
+                    learningGoal = "Handle stand-ups without rehearsing first",
+                ),
+        ),
+) {
+    OnboardingContent(
+        uiState = uiState,
+        onOpenSettings = {},
+        onLevelChanged = {},
+        onGoalChanged = {},
+        onInterestsChanged = {},
+        onPracticeMinutesChanged = {},
+        onSubmit = {},
+    )
+}
+
+/**
+ * The saved API profiles, with the first one active and the second disabled.
+ * [ApiProfileListContent] draws its own top bar, so nothing wraps it here.
+ */
+@Composable
+internal fun ApiProfileListSpecimen(
+    profiles: List<ApiProfile> = listOf(SpecimenProfile, SpecimenSecondProfile),
+) {
+    ApiProfileListContent(
+        profiles = profiles,
+        activeProfileId = profiles.firstOrNull()?.id,
+        onBack = {},
+        onAdd = {},
+        onSelect = {},
+        onEdit = {},
+        onToggleEnabled = {},
+        onDelete = {},
+    )
+}
+
+/**
+ * The edit form for an existing profile, showing a finished connection test with
+ * one probe passed and one failed — which is also what puts `ic_check` and
+ * `ic_close` in a capture.
+ *
+ * The key is a placeholder of the right shape, not a credential; the probe
+ * wording is a fixture, since the real text is whatever the provider answers.
+ */
+@Composable
+internal fun ApiProfileEditSpecimen(
+    profile: ApiProfile? = SpecimenProfile.copy(apiKey = "sk-not-a-real-key"),
+    connectionTest: ConnectionTestState = SpecimenConnectionTest,
+) {
+    ApiProfileEditContent(
+        profile = profile,
+        isNewProfile = false,
+        formError = null,
+        connectionTest = connectionTest,
+        onBack = {},
+        onNameChange = {},
+        onSpecChange = {},
+        onBaseUrlChange = {},
+        onApiKeyChange = {},
+        onModelChange = {},
+        onEnabledChange = {},
+        onTestConnection = {},
+        onSave = {},
+    )
+}
+
+private val SpecimenConnectionTest =
+    ConnectionTestState.Done(
+        ConnectionTestResult(
+            nonStreaming = ProbeOutcome.Success("replied in 412 ms"),
+            streaming =
+                ProbeOutcome.Failure(
+                    summary = "HTTP 400",
+                    detail = "This endpoint does not accept stream: true.",
+                ),
+        )
+    )
+
+/**
+ * The topic-generation provider picker, left on its default. The subtitle under
+ * that row names what the fallback currently resolves to, exactly as the screen
+ * gets it from the repository.
+ *
+ * Both fixtures are enabled: the screen is fed `enabledProfiles`, so a disabled
+ * one can never reach it.
+ */
+@Composable
+internal fun TopicProviderSpecimen(
+    profiles: List<ApiProfile> =
+        listOf(SpecimenProfile, SpecimenSecondProfile.copy(enabled = true)),
+    selectedProfileId: String? = null,
+) {
+    TopicProviderContent(
+        profiles = profiles,
+        selectedProfileId = selectedProfileId,
+        defaultSubtitle = "Currently: ${SpecimenProfile.name}",
+        onBack = {},
+        onSelect = {},
     )
 }
 

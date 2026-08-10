@@ -1,36 +1,32 @@
 package com.example.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.R
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.displayName
 import com.example.viewmodel.ApiProfileViewModel
@@ -40,7 +36,6 @@ import com.example.viewmodel.ApiProfileViewModel
  * suggestions, independent of the active chat provider. Selecting nothing (the
  * default) reuses whatever the chat is using.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopicProviderScreen(
     viewModel: ApiProfileViewModel,
@@ -51,54 +46,88 @@ fun TopicProviderScreen(
     // What "default" resolves to right now, so the row can name it.
     val topicProfile by viewModel.topicProfile.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Topic generation", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.safePopBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+    TopicProviderContent(
+        profiles = enabledProfiles,
+        selectedProfileId = topicProfileId,
+        defaultSubtitle = topicProfile?.let { "Currently: ${it.name}" }
+            ?: "No provider configured",
+        onBack = { navController.safePopBackStack() },
+        onSelect = { profileId -> viewModel.setTopicProfile(profileId) }
+    )
+}
+
+/**
+ * The picker without its ViewModel: the warm top bar over the "use the chat
+ * provider" row and one row per enabled profile.
+ *
+ * Visible to the module (not private) for the same reason [SettingsContent] is —
+ * the screenshot specimens render it directly, and it takes plain values and
+ * lambdas.
+ *
+ * This screen has no design in the handoff, so only the shell follows it: the
+ * warm top bar and its 44dp icon button. The rows are stock Material.
+ *
+ * @param selectedProfileId null when topics follow the chat provider.
+ * @param defaultSubtitle what that fallback currently resolves to, resolved by
+ *   the repository rather than restated here.
+ * @param onSelect called with null to clear the override.
+ */
+@Composable
+internal fun TopicProviderContent(
+    profiles: List<ApiProfile>,
+    selectedProfileId: String?,
+    defaultSubtitle: String,
+    onBack: () -> Unit,
+    onSelect: (String?) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        WarmTopBar(
+            title = "Topic generation",
+            navigation = {
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_arrow_left),
+                    contentDescription = "Back",
+                    onClick = onBack
                 )
-            )
-        }
-    ) { paddingValues ->
-        if (enabledProfiles.isEmpty()) {
+            }
+        )
+
+        if (profiles.isEmpty()) {
             EmptyTopicProviders(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
             )
-            return@Scaffold
+            return@Column
         }
 
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+                .weight(1f)
+                .fillMaxWidth()
+                .navigationBarsPadding()
         ) {
             item(key = "default") {
                 TopicProviderRow(
                     title = "Use chat provider (default)",
-                    subtitle = topicProfile?.let { "Currently: ${it.name}" }
-                        ?: "No provider configured",
-                    selected = topicProfileId == null,
-                    onSelect = { viewModel.setTopicProfile(null) },
+                    subtitle = defaultSubtitle,
+                    selected = selectedProfileId == null,
+                    onSelect = { onSelect(null) },
                     testTag = "topic_provider_default"
                 )
                 HorizontalDivider()
             }
-            items(enabledProfiles, key = { it.id }) { profile ->
+            items(profiles, key = { it.id }) { profile ->
                 TopicProviderRow(
                     title = profile.name,
                     subtitle = "${profile.apiSpec.displayName} · ${profile.effectiveModel}",
-                    selected = topicProfileId == profile.id,
-                    onSelect = { viewModel.setTopicProfile(profile.id) },
+                    selected = selectedProfileId == profile.id,
+                    onSelect = { onSelect(profile.id) },
                     testTag = "topic_provider_${profile.id}"
                 )
             }
