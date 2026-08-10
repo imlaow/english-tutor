@@ -23,16 +23,16 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * Renders the design system in both color schemes so a re-theme can be reviewed
- * as images instead of inferred from a diff.
+ * Renders the design system so a re-theme can be reviewed as images instead of
+ * inferred from a diff.
  *
  * Record new goldens: `./gradlew recordRoborazziDebug`
  * Check against them: `./gradlew verifyRoborazziDebug`
  * Both need Java 21 (`JAVA_HOME=/home/Laow/jdk-21`) for Robolectric.
  *
- * [MyApplicationTheme]'s arguments are pinned explicitly: `dynamicColor = false`
- * so the wallpaper palette can never leak into a golden, and `darkTheme` so the
- * host's night-mode setting cannot flip the result.
+ * [MyApplicationTheme] takes no arguments: the design ships a single light
+ * palette and dynamic color is off, so neither the wallpaper nor the host's
+ * night-mode setting can leak into a golden.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -41,21 +41,13 @@ class ThemeScreenshotTest {
 
     @get:Rule val composeTestRule = createComposeRule()
 
-    @Test fun colors_light() = capture("colors_light", darkTheme = false) { ColorSwatches() }
+    @Test fun colors_light() = capture("colors_light") { ColorSwatches() }
 
-    @Test fun colors_dark() = capture("colors_dark", darkTheme = true) { ColorSwatches() }
+    @Test fun typography_light() = capture("typography_light") { TypeSpecimens() }
 
-    @Test fun typography_light() = capture("typography_light", darkTheme = false) { TypeSpecimens() }
+    @Test fun components_light() = capture("components_light") { ComponentGallery() }
 
-    @Test fun typography_dark() = capture("typography_dark", darkTheme = true) { TypeSpecimens() }
-
-    @Test fun components_light() = capture("components_light", darkTheme = false) { ComponentGallery() }
-
-    @Test fun components_dark() = capture("components_dark", darkTheme = true) { ComponentGallery() }
-
-    @Test fun chatBubbles_light() = capture("chat_bubbles_light", darkTheme = false) { ChatBubbles() }
-
-    @Test fun chatBubbles_dark() = capture("chat_bubbles_dark", darkTheme = true) { ChatBubbles() }
+    @Test fun chatBubbles_light() = capture("chat_bubbles_light") { ChatBubbles() }
 
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no
@@ -79,9 +71,9 @@ class ThemeScreenshotTest {
         }
     }
 
-    private fun capture(fileName: String, darkTheme: Boolean, content: @Composable () -> Unit) {
+    private fun capture(fileName: String, content: @Composable () -> Unit) {
         composeTestRule.setContent {
-            MyApplicationTheme(darkTheme = darkTheme, dynamicColor = false) {
+            MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.background,

@@ -1,0 +1,29 @@
+<!-- Lucide, traced from Home.dc.html:67. viewBox 24, stroke-width 2.75, round caps/joins, no fill.
+     Stroke color is a placeholder: every use site tints it via Icon(tint = ...). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12 19v3"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF201E1D"
+        android:strokeWidth="2.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M19 10v2a7 7 0 0 1-14 0v-2"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF201E1D"
+        android:strokeWidth="2.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M12,2 A3,3 0 0,1 15,5 V12 A3,3 0 0,1 9,12 V5 A3,3 0 0,1 12,2 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#FF201E1D"
+        android:strokeWidth="2.75"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

@@ -1,52 +1,72 @@
 package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme =
-  darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
-
-private val LightColorScheme =
+/**
+ * The handoff ships one palette, so the theme is pinned to it: no `darkTheme`
+ * branch and no dynamic color, or the wallpaper would overwrite the design.
+ */
+private val WarmColorScheme =
   lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
+    // mic FAB
+    primary = Accent500,
+    onPrimary = Neutral100,
+    // topic number badges, the "Y" learner avatar
+    primaryContainer = Accent200,
+    onPrimaryContainer = Accent700,
+    inversePrimary = Accent300,
 
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    secondary = Accent2500,
+    onSecondary = Neutral100,
+    // the "T" tutor avatar, exchange-count pill, "TRY SAYING" card
+    secondaryContainer = Accent2200,
+    onSecondaryContainer = Accent2700,
+
+    tertiary = Accent600,
+    onTertiary = Neutral100,
+    tertiaryContainer = Accent100,
+    onTertiaryContainer = Accent800,
+
+    background = WarmBackground,
+    onBackground = WarmText,
+
+    // cards and chat bubbles
+    surface = Neutral100,
+    onSurface = WarmText,
+    // top bar and mic dock
+    surfaceVariant = WarmSurface,
+    onSurfaceVariant = Neutral700,
+    surfaceTint = Accent500,
+    surfaceBright = Neutral100,
+    surfaceDim = Neutral300,
+    surfaceContainerLowest = Neutral100,
+    surfaceContainerLow = Neutral100,
+    surfaceContainer = Neutral200,
+    surfaceContainerHigh = Neutral200,
+    surfaceContainerHighest = Neutral300,
+
+    inverseSurface = Neutral900,
+    inverseOnSurface = Neutral100,
+
+    // The design has no error color; accent-700 is a scorched orange that still
+    // reads as a warning without dropping a foreign red into the palette.
+    error = Accent700,
+    onError = Neutral100,
+    errorContainer = Accent200,
+    onErrorContainer = Accent800,
+
+    outline = Neutral400,
+    outlineVariant = WarmDivider,
   )
 
 @Composable
-fun MyApplicationTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color is available on Android 12+
-  dynamicColor: Boolean = true,
-  content: @Composable () -> Unit,
-) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
-    }
-
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+fun MyApplicationTheme(content: @Composable () -> Unit) {
+  MaterialTheme(
+    colorScheme = WarmColorScheme,
+    typography = Typography,
+    shapes = Shapes,
+    content = content,
+  )
 }
