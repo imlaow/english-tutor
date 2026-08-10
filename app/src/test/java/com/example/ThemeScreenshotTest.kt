@@ -89,6 +89,11 @@ class ThemeScreenshotTest {
     @Config(qualifiers = HandoffCanvasQualifier)
     fun history_empty() = capture("history_empty") { HistorySpecimen(conversations = emptyList()) }
 
+    /** The settings hub: the grouped card and the version footer. */
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun settings() = capture("settings") { SettingsSpecimen() }
+
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no
      * ViewModel, so it can be rendered directly. Covers all three variants:

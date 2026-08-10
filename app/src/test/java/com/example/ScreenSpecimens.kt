@@ -18,6 +18,7 @@ import com.example.ui.IconButton44
 import com.example.ui.MessageStream
 import com.example.ui.MicDock
 import com.example.ui.ProviderPill
+import com.example.ui.SettingsContent
 import com.example.ui.TopicSuggestions
 import com.example.ui.WarmTopBar
 import java.util.GregorianCalendar
@@ -161,6 +162,29 @@ internal fun HistorySpecimen(
         onClearAll = {},
         onDeleteSession = {},
         onOpenSession = {},
+    )
+}
+
+/**
+ * The settings hub, with a provider chosen and topic generation left on its
+ * default. [SettingsContent] draws its own top bar, so nothing wraps it here.
+ *
+ * Both subtitles are values the screen really shows: the active profile's name, and
+ * the wording used when no topic override is set. The version is the build's own,
+ * not the handoff's mock "v1.0".
+ */
+@Composable
+internal fun SettingsSpecimen(
+    apiSubtitle: String = SpecimenProfile.name,
+    topicSubtitle: String = "Chat provider (default)",
+) {
+    SettingsContent(
+        apiSubtitle = apiSubtitle,
+        topicSubtitle = topicSubtitle,
+        versionName = BuildConfig.VERSION_NAME,
+        onBack = {},
+        onApiConfiguration = {},
+        onTopicGeneration = {},
     )
 }
 
