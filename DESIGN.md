@@ -196,5 +196,6 @@ Onboarding and the three API-profile screens were never drawn. They use the shel
 and they have no drawing to be measured against — their goldens use the default device
 qualifier rather than the handoff's 393dp canvas.
 
-`ARCHITECTURE.md` asks for stock Material Design. On the four designed screens the
-handoff wins; everywhere else Material is still the default.
+Material stays the default for anything this file does not cover — that is what
+`ARCHITECTURE.md` means by it. Where the two disagree, on the four designed screens, the
+handoff wins.
