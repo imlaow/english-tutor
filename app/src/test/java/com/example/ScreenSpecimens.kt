@@ -13,12 +13,14 @@ import com.example.data.settings.ApiProfile
 import com.example.data.settings.ApiSpec
 import com.example.ui.ChatMessage
 import com.example.ui.ChatTopBar
+import com.example.ui.HistoryContent
 import com.example.ui.IconButton44
 import com.example.ui.MessageStream
 import com.example.ui.MicDock
 import com.example.ui.ProviderPill
 import com.example.ui.TopicSuggestions
 import com.example.ui.WarmTopBar
+import java.util.GregorianCalendar
 
 /**
  * Test-only specimens of the real screens, as opposed to [ColorSwatches] and its
@@ -143,6 +145,92 @@ internal fun ChatSpecimen(messages: List<ChatMessage> = SpecimenTurns) {
         )
     }
 }
+
+/**
+ * The saved-conversation list, or its empty state when [conversations] is empty.
+ *
+ * [HistoryContent] draws its own top bar, so nothing is wrapped around it here.
+ */
+@Composable
+internal fun HistorySpecimen(
+    conversations: List<List<ChatMessage>> = SpecimenConversations,
+) {
+    HistoryContent(
+        conversations = conversations,
+        onBack = {},
+        onClearAll = {},
+        onDeleteSession = {},
+        onOpenSession = {},
+    )
+}
+
+/**
+ * Fixture sessions in the shape the history screen groups out of Room: newest
+ * first, oldest-first inside each session. One topic opener with no learner line
+ * (so the `Y` row is absent), one two-turn session, and one whose lines are long
+ * enough to hit the 1-line and 2-line clamps.
+ *
+ * Timestamps are fixed so the formatted date is stable across runs; they are built
+ * in the default zone, which is also the zone the screen formats in. Both the dates
+ * and the sentences are deliberately unlike the handoff's own mock sessions — real
+ * ones come from [com.example.ui.ChatViewModel.history].
+ */
+internal val SpecimenConversations =
+    listOf(
+        listOf(
+            specimenTurn(
+                sessionId = "specimen-c",
+                userText = "",
+                aiResponse =
+                    "Let's talk about the last trip you took. Where did you go, and who was with you?",
+                timestamp = specimenTimestamp(2026, 4, 2, 20, 15),
+            ),
+        ),
+        listOf(
+            specimenTurn(
+                sessionId = "specimen-b",
+                userText = "I want to practise ordering food.",
+                aiResponse = "Good idea. Imagine we are at a bakery — what would you like?",
+                timestamp = specimenTimestamp(2026, 3, 28, 8, 5),
+            ),
+            specimenTurn(
+                sessionId = "specimen-b",
+                userText = "Two croissants, please.",
+                aiResponse = "Nicely put. Now try asking whether they are still warm.",
+                timestamp = specimenTimestamp(2026, 3, 28, 8, 7),
+            ),
+        ),
+        listOf(
+            specimenTurn(
+                sessionId = "specimen-a",
+                userText =
+                    "My colleague asked me to explain the new process and I could not find the words for it.",
+                aiResponse =
+                    "That happens to everyone. Let's build the sentence together, one step at a time, " +
+                        "and then you can say the whole thing back to me.",
+                timestamp = specimenTimestamp(2026, 3, 14, 19, 40),
+            ),
+        ),
+    )
+
+private fun specimenTurn(
+    sessionId: String,
+    userText: String,
+    aiResponse: String,
+    timestamp: Long,
+) =
+    ChatMessage(
+        id = "$sessionId-$timestamp",
+        sessionId = sessionId,
+        userText = userText,
+        aiResponse = aiResponse,
+        grammarCorrection = null,
+        timestamp = timestamp,
+    )
+
+/** [month] is 1-based, unlike [java.util.Calendar]'s. Default zone, as above. */
+private fun specimenTimestamp(year: Int, month: Int, day: Int, hour: Int, minute: Int): Long =
+    GregorianCalendar(year, month - 1, day, hour, minute).timeInMillis
 
 /**
  * Three turns, shaped like the ones the tutor actually produces: an opener with no

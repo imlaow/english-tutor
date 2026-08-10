@@ -79,6 +79,16 @@ class ThemeScreenshotTest {
     @Config(qualifiers = HandoffCanvasQualifier)
     fun chat_conversation() = capture("chat_conversation") { ChatSpecimen() }
 
+    // The history screen, both branches: saved sessions and the empty state.
+
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun history_list() = capture("history_list") { HistorySpecimen() }
+
+    @Test
+    @Config(qualifiers = HandoffCanvasQualifier)
+    fun history_empty() = capture("history_empty") { HistorySpecimen(conversations = emptyList()) }
+
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no
      * ViewModel, so it can be rendered directly. Covers all three variants:
