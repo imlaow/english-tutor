@@ -12,6 +12,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,19 +34,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,6 +67,7 @@ import com.example.ui.theme.Accent200
 import com.example.ui.theme.Accent300
 import com.example.ui.theme.Accent500
 import com.example.ui.theme.Accent700
+import com.example.ui.theme.FieldLabel
 import com.example.ui.theme.Neutral100
 import com.example.ui.theme.Neutral700
 import com.example.ui.theme.Neutral800
@@ -309,6 +319,208 @@ fun Pill(
         modifier = Modifier.size(12.dp),
       )
     }
+  }
+}
+
+// ------------------------------------------------------------- form controls
+
+/**
+ * `.field > label` — the caption above a control: 12sp at 70% of the text color.
+ *
+ * Used by [WarmTextField] and, on its own, above the controls that have no label
+ * slot of their own (the spec picker, the level chips).
+ */
+@Composable
+fun WarmFieldLabel(text: String, modifier: Modifier = Modifier) {
+  Text(
+    text = text,
+    style = FieldLabel,
+    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+    modifier = modifier,
+  )
+}
+
+/**
+ * `.field` — a labelled text input drawn as `.input`: a pill (the rounded-frame
+ * override turns every `.input` into `border-radius: 999px`), filled with
+ * `--color-surface`, hairlined with `--color-divider`, and switching that
+ * hairline to the accent while focused.
+ *
+ * The label is a block above the box rather than Material's floating one: the
+ * handoff puts it there, and a notch cut into a pill's border has nowhere to sit.
+ * It is repeated as the field's content description so the input still announces
+ * itself, which the floating label used to do.
+ *
+ * [modifier] lands on the input itself, not on the label column, so a caller's
+ * test tag stays on the thing that is typed into.
+ */
+@Composable
+fun WarmTextField(
+  value: String,
+  onValueChange: (String) -> Unit,
+  label: String,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+  isError: Boolean = false,
+  singleLine: Boolean = false,
+  placeholder: String? = null,
+  supportingText: String? = null,
+  keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+) {
+  Column(modifier = Modifier.fillMaxWidth()) {
+    WarmFieldLabel(label)
+    Spacer(Modifier.height(5.dp))
+    OutlinedTextField(
+      value = value,
+      onValueChange = onValueChange,
+      enabled = enabled,
+      isError = isError,
+      singleLine = singleLine,
+      keyboardOptions = keyboardOptions,
+      // `.input` is 14px, which is bodyMedium; the default would be bodyLarge.
+      textStyle = MaterialTheme.typography.bodyMedium,
+      placeholder =
+        placeholder?.let { { Text(it, style = MaterialTheme.typography.bodyMedium) } },
+      supportingText = supportingText?.let { { Text(it) } },
+      shape = CircleShape,
+      colors =
+        OutlinedTextFieldDefaults.colors(
+          focusedTextColor = MaterialTheme.colorScheme.onBackground,
+          unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+          // `background: var(--color-surface)` — the top bar's fill, not the card's.
+          focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+          unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+          disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+          errorContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+          cursorColor = MaterialTheme.colorScheme.primary,
+          // The handoff draws this hairline in `--color-divider`, which is ink at
+          // 16% and lands at 1.37:1 on the fill — a border you have to hunt for.
+          // `outline` is the same ramp two steps darker and clears 3:1, so the
+          // control's own edge uses it and `outlineVariant` stays for the rules
+          // that separate content. Accent on focus, as drawn.
+          focusedBorderColor = MaterialTheme.colorScheme.primary,
+          unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+          disabledBorderColor = MaterialTheme.colorScheme.outline,
+        ),
+      modifier = modifier.fillMaxWidth().semantics { contentDescription = label },
+    )
+  }
+}
+
+/**
+ * `.radio .dot` — a 16dp circle, hairlined while unselected and filled with the
+ * accent while selected.
+ *
+ * The selected state is CSS's `box-shadow: inset 0 0 0 4px var(--color-bg)` over
+ * an accent fill: a 1.5dp accent rim, a 4dp ring of the page color, then a 5dp
+ * accent center. Drawn as three nested circles, since an inset shadow has no
+ * Compose equivalent.
+ *
+ * The signature mirrors [androidx.compose.material3.RadioButton] — including the
+ * 48dp interactive footprint — so the rows it sits in keep their layout and their
+ * selectable semantics. Pass a null [onClick] when the row itself handles the tap.
+ */
+@Composable
+fun WarmRadio(
+  selected: Boolean,
+  onClick: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+) {
+  val accent = MaterialTheme.colorScheme.primary
+  Box(
+    modifier =
+      modifier
+        .minimumInteractiveComponentSize()
+        .then(
+          if (onClick != null) {
+            Modifier.selectable(
+              selected = selected,
+              enabled = enabled,
+              role = Role.RadioButton,
+              onClick = onClick,
+            )
+          } else {
+            Modifier
+          }
+        )
+        // `.btn:disabled { opacity: 0.45 }` — the only disabled treatment the
+        // handoff defines, reused here since `.radio` has none of its own.
+        .alpha(if (enabled) 1f else 0.45f),
+    contentAlignment = Alignment.Center,
+  ) {
+    if (selected) {
+      Box(
+        modifier = Modifier.size(16.dp).background(accent, CircleShape),
+        contentAlignment = Alignment.Center,
+      ) {
+        Box(
+          modifier =
+            Modifier
+              .size(13.dp)
+              .background(MaterialTheme.colorScheme.background, CircleShape),
+          contentAlignment = Alignment.Center,
+        ) {
+          Box(modifier = Modifier.size(5.dp).background(accent, CircleShape))
+        }
+      }
+    } else {
+      Box(
+        modifier =
+          Modifier
+            .size(16.dp)
+            .border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
+      )
+    }
+  }
+}
+
+/**
+ * `.seg-opt` — one option of a single-choice control: 13sp, `7px 12px`, filled
+ * with the accent and lettered in the page color once picked.
+ *
+ * [shape] and [border] are open because the handoff uses the same option two
+ * ways: standing alone as a pill with its own hairline (the level chips), or
+ * butted together inside a `.seg`, where the hairline and the rounding belong to
+ * the group and each option is square.
+ */
+@Composable
+fun ChoicePill(
+  label: String,
+  selected: Boolean,
+  onClick: () -> Unit,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+  shape: Shape = CircleShape,
+  // `outline`, not the handoff's `--color-divider`: standing alone this hairline
+  // is the control's own edge, and at 16% ink it is barely findable. See
+  // [WarmTextField]. Inside a `.seg` the caller passes null and the group draws it.
+  border: BorderStroke? = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+) {
+  Box(
+    modifier =
+      modifier
+        .alpha(if (enabled) 1f else 0.45f)
+        .clip(shape)
+        .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+        .then(if (border != null) Modifier.border(border, shape) else Modifier)
+        .selectable(
+          selected = selected,
+          enabled = enabled,
+          role = Role.RadioButton,
+          onClick = onClick,
+        )
+        .padding(horizontal = 12.dp, vertical = 7.dp),
+    contentAlignment = Alignment.Center,
+  ) {
+    Text(
+      text = label,
+      style = MaterialTheme.typography.bodySmall,
+      color =
+        if (selected) MaterialTheme.colorScheme.background
+        else MaterialTheme.colorScheme.onBackground,
+      maxLines = 1,
+    )
   }
 }
 

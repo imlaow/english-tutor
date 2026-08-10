@@ -95,3 +95,11 @@ val Typography =
  * sentence case with no tracking at all.
  */
 val SectionKicker = Typography.labelMedium.copy(letterSpacing = 1.54.sp)
+
+/**
+ * `.field > label`: the caption above a form control, 12px in the handoff. That
+ * size sits between [Typography.labelMedium]'s 11 and [Typography.bodySmall]'s 13
+ * and is the only place it occurs, so it is derived rather than given a role of
+ * its own — body face, regular weight, the same `line-height: 1.55`.
+ */
+val FieldLabel = Typography.bodySmall.copy(fontSize = 12.sp, lineHeight = (12 * 1.55f).sp)

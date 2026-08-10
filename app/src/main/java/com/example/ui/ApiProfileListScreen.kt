@@ -19,7 +19,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -97,8 +96,9 @@ fun ApiProfileListScreen(
  * the screenshot specimens render it directly, and it takes plain values and
  * lambdas. The delete confirmation stays outside, with the state it arms.
  *
- * This screen has no design in the handoff, so only the shell follows it: the
- * warm top bar and its 44dp icon buttons. The rows are stock Material.
+ * The handoff never drew this screen. Its shell is the design's top bar and 44dp
+ * buttons and the selection mark is its `.radio` dot, by way of [WarmRadio]; the
+ * rows themselves stay Material list items, which the design has no answer for.
  */
 @Composable
 internal fun ApiProfileListContent(
@@ -189,7 +189,7 @@ private fun ApiProfileRow(
             Text("${profile.apiSpec.displayName} · ${profile.effectiveModel}")
         },
         leadingContent = {
-            RadioButton(
+            WarmRadio(
                 selected = isActive,
                 onClick = onSelect.takeIf { profile.enabled },
                 enabled = profile.enabled

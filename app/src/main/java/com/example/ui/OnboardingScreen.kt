@@ -18,10 +18,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -91,10 +88,11 @@ fun OnboardingScreen(
  * lambdas. The snackbar stays outside, since it belongs to the ViewModel's error
  * flow rather than to the layout.
  *
- * This screen has no design in the handoff, so only the shell follows it: the
- * warm top bar and its 44dp icon button. The form below is stock Material.
+ * The handoff never drew this screen, but it does specify the controls: the
+ * shell is its top bar and 44dp button, the fields are its `.input` and the level
+ * picker its `.seg-opt`, both by way of [WarmTextField] and [ChoicePill].
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun OnboardingContent(
     uiState: OnboardingUiState,
@@ -143,58 +141,52 @@ internal fun OnboardingContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Text(
-                text = "How would you rate your English level?",
-                style = MaterialTheme.typography.titleMedium
-            )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ENGLISH_LEVELS.forEach { level ->
-                    FilterChip(
-                        selected = uiState.answers.selfAssessedLevel == level,
-                        onClick = { onLevelChanged(level) },
-                        enabled = inputsEnabled,
-                        label = { Text(level) },
-                        modifier = Modifier.testTag("level_chip_$level")
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                WarmFieldLabel("How would you rate your English level?")
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ENGLISH_LEVELS.forEach { level ->
+                        ChoicePill(
+                            label = level,
+                            selected = uiState.answers.selfAssessedLevel == level,
+                            onClick = { onLevelChanged(level) },
+                            enabled = inputsEnabled,
+                            modifier = Modifier.testTag("level_chip_$level")
+                        )
+                    }
                 }
             }
 
-            OutlinedTextField(
+            WarmTextField(
                 value = uiState.answers.learningGoal,
                 onValueChange = onGoalChanged,
+                label = "What is your learning goal?",
                 enabled = inputsEnabled,
-                label = { Text("What is your learning goal?") },
-                placeholder = { Text("e.g. Speak confidently at work") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("goal_field")
+                placeholder = "e.g. Speak confidently at work",
+                modifier = Modifier.testTag("goal_field")
             )
 
-            OutlinedTextField(
+            WarmTextField(
                 value = uiState.answers.interests,
                 onValueChange = onInterestsChanged,
+                label = "What topics interest you?",
                 enabled = inputsEnabled,
-                label = { Text("What topics interest you?") },
-                placeholder = { Text("e.g. Travel, movies, technology") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("interests_field")
+                placeholder = "e.g. Travel, movies, technology",
+                modifier = Modifier.testTag("interests_field")
             )
 
-            OutlinedTextField(
+            WarmTextField(
                 value = uiState.answers.dailyPracticeMinutes,
                 onValueChange = onPracticeMinutesChanged,
+                label = "Minutes you can practice per day",
                 enabled = inputsEnabled,
-                label = { Text("Minutes you can practice per day") },
-                placeholder = { Text("e.g. 30") },
+                placeholder = "e.g. 30",
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("minutes_field")
+                modifier = Modifier.testTag("minutes_field")
             )
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -1,37 +1,39 @@
 package com.example.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -87,8 +89,10 @@ fun ApiProfileEditScreen(
  * the screenshot specimens render it directly, and it takes plain values and
  * lambdas.
  *
- * This screen has no design in the handoff, so only the shell follows it: the
- * warm top bar and its 44dp icon button. The fields are stock Material.
+ * The handoff never drew this screen, but it does specify the controls: the
+ * shell is its top bar and 44dp button, the fields are its `.input` by way of
+ * [WarmTextField], and the spec picker its `.seg`. The switch stays stock
+ * Material — the design system has no toggle.
  *
  * @param profile null only while an existing profile is being read back from
  *   Room; the bar stays up and the fields are simply absent until it arrives,
@@ -96,7 +100,6 @@ fun ApiProfileEditScreen(
  * @param isNewProfile only decides the title; the form itself is the same either
  *   way, since a new profile is an unsaved [ApiProfile] with the spec defaults.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ApiProfileEditContent(
     profile: ApiProfile?,
@@ -140,87 +143,59 @@ internal fun ApiProfileEditContent(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            OutlinedTextField(
+            WarmTextField(
                 value = profile.name,
                 onValueChange = onNameChange,
-                label = { Text("Name") },
-                supportingText = {
-                    Text(
-                        if (formError == ApiProfileFormError.NAME) "Give the provider a name."
-                        else "Shown in the provider list."
-                    )
-                },
+                label = "Name",
+                supportingText =
+                    if (formError == ApiProfileFormError.NAME) "Give the provider a name."
+                    else "Shown in the provider list.",
                 isError = formError == ApiProfileFormError.NAME,
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("profile_name_field")
+                modifier = Modifier.testTag("profile_name_field")
             )
 
-            Text(
-                text = "API specification",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                ApiSpec.entries.forEachIndexed { index, spec ->
-                    SegmentedButton(
-                        selected = profile.apiSpec == spec,
-                        onClick = { onSpecChange(spec) },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = index,
-                            count = ApiSpec.entries.size
-                        ),
-                        modifier = Modifier.testTag("provider_${spec.name.lowercase()}")
-                    ) {
-                        Text(spec.displayName)
-                    }
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                WarmFieldLabel("API specification")
+                SpecPicker(
+                    selected = profile.apiSpec,
+                    onSpecChange = onSpecChange
+                )
             }
 
-            OutlinedTextField(
+            WarmTextField(
                 value = profile.baseUrl,
                 onValueChange = onBaseUrlChange,
-                label = { Text("Base URL") },
-                placeholder = { Text(profile.apiSpec.defaultBaseUrl) },
-                supportingText = {
-                    Text(
-                        if (profile.apiSpec == ApiSpec.OPENAI) {
-                            "Leave empty to use the default. Any OpenAI-compatible endpoint works."
-                        } else {
-                            "Leave empty to use the default."
-                        }
-                    )
-                },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                label = "Base URL",
+                placeholder = profile.apiSpec.defaultBaseUrl,
+                supportingText =
+                    if (profile.apiSpec == ApiSpec.OPENAI) {
+                        "Leave empty to use the default. Any OpenAI-compatible endpoint works."
+                    } else {
+                        "Leave empty to use the default."
+                    },
+                singleLine = true
             )
 
-            OutlinedTextField(
+            WarmTextField(
                 value = profile.apiKey,
                 onValueChange = onApiKeyChange,
-                label = { Text("API key") },
-                supportingText = {
-                    Text(
-                        if (formError == ApiProfileFormError.API_KEY) "An API key is required."
-                        else "Required — there is no default."
-                    )
-                },
+                label = "API key",
+                supportingText =
+                    if (formError == ApiProfileFormError.API_KEY) "An API key is required."
+                    else "Required — there is no default.",
                 isError = formError == ApiProfileFormError.API_KEY,
                 singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("profile_api_key_field")
+                modifier = Modifier.testTag("profile_api_key_field")
             )
 
-            OutlinedTextField(
+            WarmTextField(
                 value = profile.model,
                 onValueChange = onModelChange,
-                label = { Text("Model") },
-                placeholder = { Text(profile.apiSpec.defaultModel) },
-                supportingText = { Text("Leave empty to use the default.") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                label = "Model",
+                placeholder = profile.apiSpec.defaultModel,
+                supportingText = "Leave empty to use the default.",
+                singleLine = true
             )
 
             Row(
@@ -280,6 +255,40 @@ internal fun ApiProfileEditContent(
             ) {
                 Text("Save")
             }
+        }
+    }
+}
+
+/**
+ * `.seg` — the spec options butted together in one pill-shaped frame with a
+ * hairline between them, rather than Material's separate segmented buttons.
+ *
+ * `inline-flex` in the handoff, so the frame hugs its options instead of being
+ * stretched across the form the way Material's segmented button row was.
+ */
+@Composable
+private fun SpecPicker(selected: ApiSpec, onSpecChange: (ApiSpec) -> Unit) {
+    Row(
+        modifier = Modifier
+            .height(IntrinsicSize.Min)
+            .clip(CircleShape)
+            // The group's own edge, so it follows the control outline the text
+            // fields use rather than the handoff's fainter divider.
+            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            .selectableGroup()
+    ) {
+        ApiSpec.entries.forEachIndexed { index, spec ->
+            // `.seg-opt + .seg-opt { border-left: 1px solid var(--color-divider) }`
+            // — this one really is a divider: it separates content inside the frame.
+            if (index > 0) VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            ChoicePill(
+                label = spec.displayName,
+                selected = selected == spec,
+                onClick = { onSpecChange(spec) },
+                shape = RectangleShape,
+                border = null,
+                modifier = Modifier.testTag("provider_${spec.name.lowercase()}")
+            )
         }
     }
 }

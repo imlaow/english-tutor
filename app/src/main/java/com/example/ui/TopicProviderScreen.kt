@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -64,8 +63,9 @@ fun TopicProviderScreen(
  * the screenshot specimens render it directly, and it takes plain values and
  * lambdas.
  *
- * This screen has no design in the handoff, so only the shell follows it: the
- * warm top bar and its 44dp icon button. The rows are stock Material.
+ * The handoff never drew this screen. Its shell is the design's top bar and 44dp
+ * button and the selection mark is its `.radio` dot, by way of [WarmRadio]; the
+ * rows themselves stay Material list items, which the design has no answer for.
  *
  * @param selectedProfileId null when topics follow the chat provider.
  * @param defaultSubtitle what that fallback currently resolves to, resolved by
@@ -147,7 +147,7 @@ private fun TopicProviderRow(
         headlineContent = { Text(title) },
         supportingContent = { Text(subtitle) },
         leadingContent = {
-            RadioButton(selected = selected, onClick = onSelect)
+            WarmRadio(selected = selected, onClick = onSelect)
         },
         modifier = Modifier
             .fillMaxWidth()
