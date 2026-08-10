@@ -3,14 +3,35 @@
 What the app looks like and why. `CLAUDE.md` covers how not to break it;
 `ARCHITECTURE.md` owns the code structure.
 
-The look comes from an "organic" design handoff: a warm, low-contrast palette with a
-display serif over a geometric sans, generous rounding, and soft ink-tinted shadows.
+## The design language
+
+**Organic**, a template from Claude design. The app did not invent a look; it adopted one
+and then followed it closely.
+
+What characterises it, and what to preserve when adding anything new:
+
+- **Warm and low-contrast.** Every surface is a tinted off-white — sand, cream, oat —
+  rather than white or grey. Nothing in the palette is neutral in the literal sense.
+- **A display serif over a geometric sans.** Caprasimo carries every heading with real
+  personality; Figtree carries everything else and stays out of the way. The contrast
+  between the two faces is the point.
+- **Rounding to the limit.** Cards go to 32dp and small controls go fully round rather
+  than to a fixed radius. Nothing has a sharp corner.
+- **Shadows tinted with ink, not black.** Depth reads as a soft warm shade rather than a
+  grey drop.
+- **Colour that means something.** Terracotta marks what the learner does and what to
+  press; olive marks what the tutor says and what is going well. Correction is olive, not
+  red — the palette carries the app's tone of voice.
 
 ## Where the spec came from
 
 `~/Downloads/design_handoff_english_tutor_ui/` — four screen drawings plus
-`_ds/organic-*/styles.css`, which is the actual source of truth for tokens and
-components.
+`_ds/organic-*/styles.css`, the template's own stylesheet and the actual source of truth
+for tokens and components.
+
+That stylesheet twice points at a `readme.md` documenting each class, and **that file was
+not part of the export.** So the component notes below were reconstructed from the CSS
+itself rather than read off the template's own documentation.
 
 **That directory is outside this repository and may not survive.** Everything below was
 transcribed from it and cross-checked against the code, so this file is the durable copy.

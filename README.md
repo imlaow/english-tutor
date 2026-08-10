@@ -77,7 +77,7 @@ Four further documents, each owning one thing:
 | | |
 |---|---|
 | `ARCHITECTURE.md` | Tech stack, package boundaries, data-flow rules |
-| `DESIGN.md` | Palette, type scale, components, and the deliberate departures |
+| `DESIGN.md` | The Organic design language, its tokens and components, and the deliberate departures |
 | `CLAUDE.md` | How not to break the UI — read before changing it |
 | `TASKS.md` | Working notes (untracked) |
 
