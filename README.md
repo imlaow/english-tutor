@@ -1,21 +1,86 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# English Tutor
 
-# Run and deploy your AI Studio app
+An Android app for practising spoken English with an AI tutor. You talk, it answers, and
+it slips grammar fixes in as suggestions rather than corrections.
 
-This contains everything you need to run your app locally.
+Everything is voice: there is no text input anywhere in the conversation. Tap the
+microphone, speak, and the reply comes back written and read aloud.
 
-View your app in AI Studio: https://ai.studio/apps/5c04d8fe-5c2d-465a-8c06-dd06861165fb
+## What it does
 
-## Run Locally
+- **Suggests topics to talk about**, generated for you from the profile built during
+  onboarding — your level, your goal, what you are interested in. Tap one and the tutor
+  opens the conversation.
+- **Replies in conversation**, keeping the thread so answers follow on from what you said.
+- **Offers a better phrasing** when something is off, shown as a "try saying" note beside
+  the reply rather than as an error.
+- **Reads every reply aloud** through Azure Neural TTS.
+- **Keeps your sessions**, so you can reopen an old conversation and carry on.
 
-**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
+You bring your own model API key. Nothing is hosted, and no key is compiled in.
 
+## Running it
 
-1. Open Android Studio
-2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory with your Azure Speech credentials (see `.env.example` for an example). The Gemini/OpenAI API key is not part of the build: enter it in the app's Settings screen instead.
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
+**You need:** Android Studio, a device or emulator on API 24+, and an API key for either
+Gemini or an OpenAI-compatible endpoint.
+
+1. Clone and open the project in Android Studio.
+2. **Copy `.env.example` to `.env`** and fill in `AZURE_SPEECH_KEY` and
+   `AZURE_SPEECH_REGION`. These are the only build-time secrets; they are read by the
+   Secrets Gradle Plugin into `BuildConfig` and are needed for the tutor's voice.
+3. **Supply a debug keystore.** `debug.keystore` is deliberately untracked, so a fresh
+   clone has none and `assembleDebug` will fail. Either drop your own in at the project
+   root, or delete this line from `app/build.gradle.kts`:
+   ```kotlin
+   signingConfig = signingConfigs.getByName("debugConfig")
+   ```
+4. Run the app. Onboarding asks a few questions, then Settings → API configuration is
+   where you add the model key. **The model API key is entered in the app, not built in.**
+
+The app asks for microphone permission on the first tap of the mic, and needs network
+access for the model and for speech synthesis.
+
+## Building and testing
+
+```bash
+./gradlew verifyRoborazziDebug   # unit tests + screenshot comparison — the whole check
+./gradlew assembleDebug          # debug APK
+```
+
+`verifyRoborazziDebug` is what CI runs, and it covers both: the unit tests around the
+data path and 16 reference screenshots of the UI. Any JDK from 17 to 25 works.
+
+**Do not run `recordRoborazziDebug` to make a red build green** — it overwrites the
+reference images, which turns a regression into the new baseline. `CLAUDE.md` explains
+when recording is the right move.
+
+## How it is put together
+
+Kotlin and Jetpack Compose, MVVM with unidirectional data flow, manual dependency
+injection, Room for local storage. The model API is spoken to directly over HTTP, with
+Gemini and OpenAI-compatible request shapes behind one interface, so you can point the app
+at any provider that speaks either.
+
+```
+app/src/main/java/com/example/
+  ui/          Compose screens, the design system, and their view models
+  viewmodel/   UI state and intents
+  data/
+    local/     Room database, DAOs, entities
+    remote/    Model APIs and the profile-driven service factory
+    repository/  Coordinates local and remote
+  manager/     TtsManager
+```
+
+Four further documents, each owning one thing:
+
+| | |
+|---|---|
+| `ARCHITECTURE.md` | Tech stack, package boundaries, data-flow rules |
+| `DESIGN.md` | Palette, type scale, components, and the deliberate departures |
+| `CLAUDE.md` | How not to break the UI — read before changing it |
+| `TASKS.md` | Working notes (untracked) |
+
+## Licence
+
+Not currently licensed for redistribution.
