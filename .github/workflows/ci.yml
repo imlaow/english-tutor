@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch makes an in-flight run pointless.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # gradle/gradle-daemon-jvm.properties pins the daemon to 25. Installing it
+      # here keeps Gradle from downloading a toolchain from foojay on every run.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # Runs the unit tests and checks every screenshot against its golden. Both
+      # live in the same task graph, so this single command covers both.
+      - name: Unit tests and screenshot verification
+        run: ./gradlew verifyRoborazziDebug
+
+      # The comparison images are the only useful artifact of a screenshot
+      # failure: they show which pixels moved, which a red test name does not.
+      - name: Upload screenshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: |
+            app/build/outputs/roborazzi/
+            app/build/reports/tests/
+          retention-days: 14
+
+      - name: Assemble debug APK
+        run: ./gradlew assembleDebug
