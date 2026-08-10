@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Read `ARCHITECTURE.md` first — it owns the tech stack, package boundaries and data-flow
-rules. This file covers what it does not: the UI's visual contract and how not to break it.
+rules. `DESIGN.md` owns the palette, type scale, components and the departures from the
+handoff. This file covers what neither does: how not to break the UI that resulted.
 
 ## The screenshot goldens are the UI contract
 
@@ -44,16 +45,13 @@ written to differ from the handoff's own mock text.
 
 ## The design system supersedes stock Material
 
-`ARCHITECTURE.md` says to follow Material Design guidelines. Four screens — the chat
-screen's two states, history and settings — now follow the handoff instead, through
-`ui/DesignSystem.kt` (`WarmTopBar`, `MicDock`, `Pill`, `AvatarBadge`, `IconButton44`) and
-`ui/theme/`. On those screens the handoff wins. Reuse the shared components rather than
-rebuilding them, use `painterResource(R.drawable.ic_*)` over `Icons.*`, and take colors
-from `MaterialTheme.colorScheme` or the named tokens in `ui/theme/Color.kt` — never a raw
-hex.
+`DESIGN.md` has the palette, type scale and component inventory. The short version:
+reuse what is in `ui/DesignSystem.kt` rather than rebuilding it, use
+`painterResource(R.drawable.ic_*)` over `Icons.*`, and take colors from
+`MaterialTheme.colorScheme` or the named tokens in `ui/theme/Color.kt` — never a raw hex.
 
-Onboarding and the three API-profile screens have no design and keep their Material
-chrome. They also have no goldens.
+`DESIGN.md` also lists five deliberate departures from the handoff and four accepted
+accessibility trade-offs. Read that section before "fixing" any of them.
 
 ## Testing notes
 
