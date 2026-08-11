@@ -27,6 +27,11 @@ android {
       storePassword = System.getenv("STORE_PASSWORD")
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
+      // v2 alone covers every device this app runs on (minSdk 24), but v3 is what
+      // allows the signing key to be rotated later, and v4 lets `adb install
+      // --incremental` stream a build instead of copying it whole.
+      enableV3Signing = true
+      enableV4Signing = true
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -39,7 +44,14 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
+      // Off until someone can test a minified build on a device. R8 succeeds at
+      // build time whatever it strips, and the two things most likely to break —
+      // the Azure JNI bridge and Room's generated implementations — fail silently
+      // at runtime, in a build no test covers. proguard-rules.pro already holds
+      // the rules for both, so turning this on is a one-line change followed by
+      // that device pass.
       isMinifyEnabled = false
+      isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
