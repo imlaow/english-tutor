@@ -16,6 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pure grep, runs in about a second. Deliberately placed ahead of every
+      # toolchain and Gradle step: a raw hex colour or a Material icon should not
+      # cost a two-minute build to discover. See scripts/check-design-system.sh
+      # for what it checks and, just as importantly, what it deliberately does not.
+      - name: Design system compliance
+        run: ./scripts/check-design-system.sh
+
       # gradle/gradle-daemon-jvm.properties pins the daemon to 25. Installing it
       # here keeps Gradle from downloading a toolchain from foojay on every run.
       - uses: actions/setup-java@v4
