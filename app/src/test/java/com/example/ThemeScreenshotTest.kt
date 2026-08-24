@@ -28,7 +28,8 @@ import org.robolectric.annotation.GraphicsMode
  *
  * Record new goldens: `./gradlew recordRoborazziDebug`
  * Check against them: `./gradlew verifyRoborazziDebug`
- * Both need Java 21 (`JAVA_HOME=/home/Laow/jdk-21`) for Robolectric.
+ * Neither needs a pinned JDK: the daemon runs on 25 and the suite passes on
+ * 17, 21 and 25 alike.
  *
  * [MyApplicationTheme] takes no arguments: the design ships a single light
  * palette and dynamic color is off, so neither the wallpaper nor the host's
