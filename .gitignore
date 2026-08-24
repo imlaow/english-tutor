@@ -9,6 +9,10 @@
 
 # Local simulation state for `wrangler r2` and friends.
 .wrangler/
+
+# Which debug APK scripts/publish-debug.sh last pushed to R2, so the next run
+# knows what to delete. Per-machine state, not a shared fact.
+/.publish-debug-state
 .DS_Store
 /build
 /captures
