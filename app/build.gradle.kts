@@ -33,12 +33,6 @@ android {
       enableV3Signing = true
       enableV4Signing = true
     }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
-    }
   }
 
   buildTypes {
@@ -55,9 +49,10 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug {
-      signingConfig = signingConfigs.getByName("debugConfig")
-    }
+    // debug deliberately has no signingConfig: AGP falls back to the shared
+    // ~/.android/debug.keystore, which it creates when missing. Pointing debug at
+    // a keystore in the repo made `assembleDebug` fail anywhere that file was
+    // absent — CI included, since it is gitignored.
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
