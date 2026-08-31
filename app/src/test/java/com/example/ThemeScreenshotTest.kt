@@ -95,11 +95,12 @@ class ThemeScreenshotTest {
     @Config(qualifiers = HandoffCanvasQualifier)
     fun settings() = capture("settings") { SettingsSpecimen() }
 
-    // Onboarding and the three API-profile screens. The handoff never drew them,
-    // so they keep the class's Pixel 8 canvas rather than overriding it with the
-    // 393dp one: there is no export to lay these over, and what they pin is the
-    // shared shell (warm top bar, 44dp buttons) plus the Material controls under
-    // it — including the OutlinedTextField borders that `outline` draws.
+    // Onboarding, the three API-profile screens and the two voice screens. The
+    // handoff never drew them, so they keep the class's Pixel 8 canvas rather than
+    // overriding it with the 393dp one: there is no export to lay these over, and
+    // what they pin is the shared shell (warm top bar, 44dp buttons) plus the
+    // Material controls under it — including the OutlinedTextField borders that
+    // `outline` draws.
 
     @Test fun onboarding() = capture("onboarding") { OnboardingSpecimen() }
 
@@ -108,6 +109,10 @@ class ThemeScreenshotTest {
     @Test fun api_profile_edit() = capture("api_profile_edit") { ApiProfileEditSpecimen() }
 
     @Test fun topic_provider() = capture("topic_provider") { TopicProviderSpecimen() }
+
+    @Test fun tts_profile_list() = capture("tts_profile_list") { TtsProfileListSpecimen() }
+
+    @Test fun tts_profile_edit() = capture("tts_profile_edit") { TtsProfileEditSpecimen() }
 
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no

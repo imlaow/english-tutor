@@ -9,8 +9,13 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [UserProfileEntity::class, ChatMessageEntity::class, ApiProfileEntity::class],
-    version = 4,
+    entities = [
+        UserProfileEntity::class,
+        ChatMessageEntity::class,
+        ApiProfileEntity::class,
+        TtsProfileEntity::class
+    ],
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class)
@@ -21,6 +26,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatMessageDao(): ChatMessageDao
 
     abstract fun apiProfileDao(): ApiProfileDao
+
+    abstract fun ttsProfileDao(): TtsProfileDao
 
     companion object {
 
@@ -73,6 +80,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // v5 gives text-to-speech the same treatment v4 gave the model APIs: the
+        // Azure key, region and voice move out of BuildConfig (where only whoever
+        // built the APK could set them) into a list of named profiles the user
+        // edits in Settings. Nothing is carried over — the table starts empty, and
+        // a build that still has the keys in its `.env` keeps using them until the
+        // first profile is saved.
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `tts_profile` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`speech_key` TEXT NOT NULL, " +
+                        "`region` TEXT NOT NULL, " +
+                        "`voice` TEXT NOT NULL, " +
+                        "`enabled` INTEGER NOT NULL, " +
+                        "`sort_order` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -82,7 +111,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { instance = it }
             }

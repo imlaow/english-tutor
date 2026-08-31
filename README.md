@@ -25,9 +25,11 @@ You bring your own model API key. Nothing is hosted, and no key is compiled in.
 Gemini or an OpenAI-compatible endpoint.
 
 1. Clone and open the project in Android Studio.
-2. **Copy `.env.example` to `.env`** and fill in `AZURE_SPEECH_KEY` and
+2. **Optional: copy `.env.example` to `.env`** and fill in `AZURE_SPEECH_KEY` and
    `AZURE_SPEECH_REGION`. These are the only build-time secrets; they are read by the
-   Secrets Gradle Plugin into `BuildConfig` and are needed for the tutor's voice.
+   Secrets Gradle Plugin into `BuildConfig` and give the tutor a voice without any
+   setup. You can skip them and add the same key under Settings -> Text to speech
+   instead, which is also how you change region or voice.
 3. **Supply a debug keystore.** `debug.keystore` is deliberately untracked, so a fresh
    clone has none and `assembleDebug` will fail. Either drop your own in at the project
    root, or delete this line from `app/build.gradle.kts`:
@@ -35,7 +37,8 @@ Gemini or an OpenAI-compatible endpoint.
    signingConfig = signingConfigs.getByName("debugConfig")
    ```
 4. Run the app. Onboarding asks a few questions, then Settings → API configuration is
-   where you add the model key. **The model API key is entered in the app, not built in.**
+   where you add the model key, and Settings → Text to speech where you add the Azure
+   Speech key. **Both keys are entered in the app, not built in.**
 
 The app asks for microphone permission on the first tap of the mic, and needs network
 access for the model and for speech synthesis.
