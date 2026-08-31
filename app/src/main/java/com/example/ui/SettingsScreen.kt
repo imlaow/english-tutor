@@ -44,6 +44,7 @@ import androidx.navigation.NavController
 import com.example.BuildConfig
 import com.example.R
 import com.example.data.repository.ApiProfileRepository
+import com.example.data.repository.TtsProfileRepository
 import com.example.ui.theme.Accent100
 import com.example.ui.theme.Accent2700
 import com.example.ui.theme.Neutral500
@@ -75,6 +76,10 @@ fun SettingsScreen(navController: NavController) {
     val activeProfile by apiProfileRepository.activeProfile.collectAsState()
     val topicProfileId by apiProfileRepository.topicProfileId.collectAsState()
     val topicProfile by apiProfileRepository.topicProfile.collectAsState()
+    val ttsProfileRepository = remember { TtsProfileRepository.getInstance(context) }
+    // The effective one, not the active one: with no profile saved the app still
+    // speaks with the keys baked in at build time, and the row has to say so.
+    val ttsProfile by ttsProfileRepository.effectiveProfile.collectAsState()
 
     SettingsContent(
         apiSubtitle = activeProfile?.name ?: "Not configured",
@@ -85,6 +90,7 @@ fun SettingsScreen(navController: NavController) {
         } else {
             topicProfile?.name ?: "Chat provider (default)"
         },
+        ttsSubtitle = ttsProfile?.name ?: "Not configured",
         versionName = BuildConfig.VERSION_NAME,
         onBack = { navController.safePopBackStack() },
         onApiConfiguration = {
@@ -92,6 +98,9 @@ fun SettingsScreen(navController: NavController) {
         },
         onTopicGeneration = {
             navController.navigate(Route.TOPIC_PROVIDER) { launchSingleTop = true }
+        },
+        onTextToSpeech = {
+            navController.navigate(Route.TTS_PROFILES) { launchSingleTop = true }
         }
     )
 }
@@ -110,10 +119,12 @@ fun SettingsScreen(navController: NavController) {
 internal fun SettingsContent(
     apiSubtitle: String,
     topicSubtitle: String,
+    ttsSubtitle: String,
     versionName: String,
     onBack: () -> Unit,
     onApiConfiguration: () -> Unit,
-    onTopicGeneration: () -> Unit
+    onTopicGeneration: () -> Unit,
+    onTextToSpeech: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -177,6 +188,24 @@ internal fun SettingsContent(
                     iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
                     onClick = onTopicGeneration,
                     modifier = Modifier.testTag("settings_topic_generation")
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = RowDividerIndent),
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                SettingsEntry(
+                    title = "Text to speech",
+                    subtitle = ttsSubtitle,
+                    icon = painterResource(R.drawable.ic_volume),
+                    // Peach again rather than `tertiaryContainer`: that token is
+                    // Accent100, the same tint a pressed row paints itself, so the
+                    // circle would vanish while the row is held. The two rows that
+                    // hold a key sharing a colour is not an accident either.
+                    iconBackground = MaterialTheme.colorScheme.primaryContainer,
+                    iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    onClick = onTextToSpeech,
+                    modifier = Modifier.testTag("settings_text_to_speech")
                 )
             }
 

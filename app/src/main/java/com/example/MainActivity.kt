@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.data.local.AppDatabase
+import com.example.manager.TtsManager
 import com.example.ui.ApiProfileEditScreen
 import com.example.ui.ApiProfileListScreen
 import com.example.ui.ChatScreen
@@ -29,6 +32,8 @@ import com.example.ui.OnboardingScreen
 import com.example.ui.Route
 import com.example.ui.SettingsScreen
 import com.example.ui.TopicProviderScreen
+import com.example.ui.TtsProfileEditScreen
+import com.example.ui.TtsProfileListScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.ApiProfileViewModel
 import com.example.viewmodel.ApiProfileViewModelFactory
@@ -36,6 +41,8 @@ import com.example.viewmodel.OnboardingViewModel
 import com.example.viewmodel.OnboardingViewModelFactory
 import com.example.viewmodel.TopicsViewModel
 import com.example.viewmodel.TopicsViewModelFactory
+import com.example.viewmodel.TtsProfileViewModel
+import com.example.viewmodel.TtsProfileViewModelFactory
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,6 +79,18 @@ class MainActivity : ComponentActivity() {
             val apiProfileViewModel: ApiProfileViewModel = viewModel(
                 factory = ApiProfileViewModelFactory(applicationContext)
             )
+            val ttsProfileViewModel: TtsProfileViewModel = viewModel(
+                factory = TtsProfileViewModelFactory(applicationContext)
+            )
+
+            // TtsManager holds no configuration of its own, so the composition
+            // root keeps it pointed at the profile in effect. Done here rather
+            // than in ChatScreen because playback outlives that destination:
+            // leaving the chat stops an utterance, it does not unconfigure it.
+            val speechProfile by ttsProfileViewModel.effectiveProfile.collectAsState()
+            LaunchedEffect(speechProfile) {
+                TtsManager.configure(speechProfile?.toConfig())
+            }
 
             NavHost(
                 navController = navController,
@@ -122,6 +141,12 @@ class MainActivity : ComponentActivity() {
                         navController = navController
                     )
                 }
+                composable(Route.TTS_PROFILES) {
+                    TtsProfileListScreen(
+                        viewModel = ttsProfileViewModel,
+                        navController = navController
+                    )
+                }
                 composable(
                     route = Route.API_PROFILE_EDIT,
                     arguments = listOf(
@@ -136,6 +161,27 @@ class MainActivity : ComponentActivity() {
                         factory = ApiProfileViewModelFactory(applicationContext)
                     )
                     ApiProfileEditScreen(
+                        viewModel = editViewModel,
+                        navController = navController,
+                        profileId = backStackEntry.arguments?.getString(Route.PROFILE_ID_ARG)
+                    )
+                }
+                composable(
+                    route = Route.TTS_PROFILE_EDIT,
+                    arguments = listOf(
+                        navArgument(Route.PROFILE_ID_ARG) {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        }
+                    )
+                ) { backStackEntry ->
+                    // Its own instance, for the same reason the API edit form has
+                    // one: the draft must start empty on each navigation.
+                    val editViewModel: TtsProfileViewModel = viewModel(
+                        factory = TtsProfileViewModelFactory(applicationContext)
+                    )
+                    TtsProfileEditScreen(
                         viewModel = editViewModel,
                         navController = navController,
                         profileId = backStackEntry.arguments?.getString(Route.PROFILE_ID_ARG)

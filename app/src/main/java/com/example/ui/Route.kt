@@ -10,14 +10,21 @@ object Route {
     const val SETTINGS = "settings"
     const val API_PROFILES = "api_profiles"
     const val TOPIC_PROVIDER = "topic_provider"
+    const val TTS_PROFILES = "tts_profiles"
 
     const val PROFILE_ID_ARG = "profileId"
 
     /** Doubles as the new-profile and edit-profile destination; no arg means "new". */
     const val API_PROFILE_EDIT = "api_profile_edit?$PROFILE_ID_ARG={$PROFILE_ID_ARG}"
 
+    /** Same shape as [API_PROFILE_EDIT], for the voice form. */
+    const val TTS_PROFILE_EDIT = "tts_profile_edit?$PROFILE_ID_ARG={$PROFILE_ID_ARG}"
+
     fun apiProfileEdit(profileId: String? = null): String =
         if (profileId == null) "api_profile_edit" else "api_profile_edit?$PROFILE_ID_ARG=$profileId"
+
+    fun ttsProfileEdit(profileId: String? = null): String =
+        if (profileId == null) "tts_profile_edit" else "tts_profile_edit?$PROFILE_ID_ARG=$profileId"
 }
 
 /**

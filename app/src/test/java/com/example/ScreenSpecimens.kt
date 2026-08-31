@@ -13,6 +13,7 @@ import com.example.data.remote.ConnectionTestResult
 import com.example.data.remote.ProbeOutcome
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.ApiSpec
+import com.example.data.settings.TtsProfile
 import com.example.ui.ApiProfileEditContent
 import com.example.ui.ApiProfileListContent
 import com.example.ui.ChatMessage
@@ -26,6 +27,8 @@ import com.example.ui.ProviderPill
 import com.example.ui.SettingsContent
 import com.example.ui.TopicProviderContent
 import com.example.ui.TopicSuggestions
+import com.example.ui.TtsProfileEditContent
+import com.example.ui.TtsProfileListContent
 import com.example.ui.WarmTopBar
 import com.example.viewmodel.ConnectionTestState
 import com.example.viewmodel.OnboardingAnswers
@@ -71,6 +74,24 @@ private val SpecimenSecondProfile =
         id = "specimen-2",
         name = "Work account",
         apiSpec = ApiSpec.OPENAI,
+        enabled = false,
+    )
+
+/**
+ * A saved Azure Speech profile. Its voice is left blank on purpose: the row then
+ * prints `effectiveVoice`, which is [TtsProfile.DEFAULT_VOICE] rather than a
+ * voice name typed out here.
+ */
+private val SpecimenVoice =
+    TtsProfile(id = "specimen-voice", name = "Azure personal", region = "eastus")
+
+/** A second voice, disabled so a capture shows both row states at once. */
+private val SpecimenSecondVoice =
+    TtsProfile(
+        id = "specimen-voice-2",
+        name = "Work subscription",
+        region = "westeurope",
+        voice = "en-GB-RyanNeural",
         enabled = false,
     )
 
@@ -200,14 +221,17 @@ internal fun HistorySpecimen(
 internal fun SettingsSpecimen(
     apiSubtitle: String = SpecimenProfile.name,
     topicSubtitle: String = "Chat provider (default)",
+    ttsSubtitle: String = SpecimenVoice.name,
 ) {
     SettingsContent(
         apiSubtitle = apiSubtitle,
         topicSubtitle = topicSubtitle,
+        ttsSubtitle = ttsSubtitle,
         versionName = BuildConfig.VERSION_NAME,
         onBack = {},
         onApiConfiguration = {},
         onTopicGeneration = {},
+        onTextToSpeech = {},
     )
 }
 
@@ -330,6 +354,51 @@ internal fun TopicProviderSpecimen(
         defaultSubtitle = "Currently: ${SpecimenProfile.name}",
         onBack = {},
         onSelect = {},
+    )
+}
+
+/**
+ * The saved voices, with the first one active and the second disabled — the same
+ * two row states [ApiProfileListSpecimen] pins, for the other set of credentials.
+ */
+@Composable
+internal fun TtsProfileListSpecimen(
+    profiles: List<TtsProfile> = listOf(SpecimenVoice, SpecimenSecondVoice),
+) {
+    TtsProfileListContent(
+        profiles = profiles,
+        activeProfileId = profiles.firstOrNull()?.id,
+        onBack = {},
+        onAdd = {},
+        onSelect = {},
+        onEdit = {},
+        onToggleEnabled = {},
+        onDelete = {},
+    )
+}
+
+/**
+ * The edit form for an existing voice, with the voice field left empty so the
+ * capture also pins the placeholder — which is the default voice constant, not a
+ * name written out here.
+ *
+ * The key is a placeholder of the right shape, not a credential.
+ */
+@Composable
+internal fun TtsProfileEditSpecimen(
+    profile: TtsProfile? = SpecimenVoice.copy(speechKey = "not-a-real-speech-key"),
+) {
+    TtsProfileEditContent(
+        profile = profile,
+        isNewProfile = false,
+        formError = null,
+        onBack = {},
+        onNameChange = {},
+        onSpeechKeyChange = {},
+        onRegionChange = {},
+        onVoiceChange = {},
+        onEnabledChange = {},
+        onSave = {},
     )
 }
 
