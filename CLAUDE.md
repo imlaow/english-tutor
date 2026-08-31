@@ -6,9 +6,11 @@ handoff. This file covers what neither does: how not to break the UI that result
 
 ## The screenshot goldens are the UI contract
 
-`app/src/test/screenshots/*.png` are 12 checked-in reference images. `ThemeScreenshotTest`
-renders the theme (colors, type, components, bubbles) and the four designed screens through
-the specimens in `ScreenSpecimens.kt`, then compares against them.
+`app/src/test/screenshots/*.png` are 18 checked-in reference images. `ThemeScreenshotTest`
+renders four theme specimens (colors, type, components, bubbles) and 14 screen states —
+home in four states, chat, history full and empty, settings, onboarding, the API and TTS
+profile list/edit pairs, and the topic provider — through the specimens in
+`ScreenSpecimens.kt`, then compares against them.
 
 ```bash
 ./gradlew verifyRoborazziDebug   # check against the goldens — also runs all unit tests
@@ -64,5 +66,6 @@ accessibility trade-offs. Read that section before "fixing" any of them.
 
 ## Repository hygiene
 
-`.idea/` is tracked and churns on every IDE action (`deploymentTargetSelector.xml` even
-stores an ADB endpoint). Never `git add -A`; stage the files you actually changed.
+`.idea/` is gitignored as of 2026-08-10 (`144b002`): it churned on every IDE action, and
+`deploymentTargetSelector.xml` even stored an ADB endpoint. Never `git add -A` anyway —
+stage the files you actually changed.
