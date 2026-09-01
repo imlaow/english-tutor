@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
 # Build the debug APK, delete the previously published one, upload the new one
-# to the Cloudflare R2 bucket `english-tutor`, and verify the upload
-# byte-for-byte.
+# to the Cloudflare R2 bucket `english-tutor`, and verify it byte-for-byte.
 #
 # Usage:
 #   scripts/publish-debug.sh [--dry-run]
@@ -93,6 +92,9 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     -h|--help)
+      # Lines 3-7 are the description and the usage example. This range tracks
+      # the header block above, so rewrapping it means fixing the range too —
+      # otherwise --help quietly stops printing at a dangling "Usage:".
       sed -n '3,7p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
