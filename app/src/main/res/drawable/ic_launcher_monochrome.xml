@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer (Android 13+). The bubble silhouette only: the three dots are
+     dropped because a single-colour mask cannot tell them from the bubble. The system
+     tints this, so the fill colour only has to be opaque. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="10.5"
+        android:translateY="9.34"
+        android:scaleX="0.29"
+        android:scaleY="0.29">
+        <path
+            android:fillColor="#000000"
+            android:pathData="M122,78 H178 A62,62 0 0 1 240,140 A62,62 0 0 1 178,202 H76 A16,16 0 0 1 60,186 V140 A62,62 0 0 1 122,78 Z" />
+        <path
+            android:fillColor="#000000"
+            android:pathData="M81,188 H81 A21,21 0 0 1 102,209 A21,21 0 0 1 81,230 H70 A10,10 0 0 1 60,220 V209 A21,21 0 0 1 81,188 Z" />
+    </group>
+</vector>
