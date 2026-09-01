@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Build the debug APK, delete the previously published one, upload the new one
-# to the Cloudflare R2 bucket `zhongzhuan`, and verify the upload byte-for-byte.
+# to the Cloudflare R2 bucket `english-tutor`, and verify it byte-for-byte.
 #
 # Usage:
 #   scripts/publish-debug.sh [--dry-run]
@@ -11,9 +11,13 @@
 #
 #   1. `wrangler r2 object` has only get / put / delete. There is no `list`, so
 #      the bucket cannot be enumerated. Deleting the previous upload therefore
-#      relies on this script's own ledger file. It NEVER deletes by filename
-#      pattern: `zhongzhuan` is a shared scratch bucket holding unrelated
-#      objects (including release APKs), and deletion is irreversible.
+#      relies on this script's own ledger file, and it NEVER deletes by
+#      filename pattern — deletion is irreversible and an unenumerable bucket
+#      gives no way to check what a pattern would have matched.
+#
+#      The ledger records which bucket each upload went to, so a ledger written
+#      before `english-tutor` existed still cleans up its object in the shared
+#      `zhongzhuan` scratch bucket instead of orphaning it there.
 #
 #   2. Every r2 command must pass --remote. Without it wrangler silently writes
 #      to the local simulator under .wrangler/ and still prints "Upload
@@ -52,7 +56,7 @@
 
 set -euo pipefail
 
-BUCKET="zhongzhuan"
+BUCKET="english-tutor"
 APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 LEDGER=".publish-debug-state"
 
@@ -88,6 +92,9 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     -h|--help)
+      # Lines 3-7 are the description and the usage example. This range tracks
+      # the header block above, so rewrapping it means fixing the range too —
+      # otherwise --help quietly stops printing at a dangling "Usage:".
       sed -n '3,7p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
@@ -157,7 +164,14 @@ step "Branch $BRANCH at $SHA${DIRTY_SUFFIX}, version $VERSION_NAME"
 # to handle a ledger left behind by an older version of this script.
 PREV_KEY=""
 STALE_KEYS=()
+# Deletes go to the bucket the ledger says those keys were uploaded to, which
+# is not necessarily the one this run uploads to. Ledgers predating the move to
+# a dedicated bucket carry no LAST_BUCKET line; everything they list is in
+# `zhongzhuan`, the shared scratch bucket this script used to publish to.
+PREV_BUCKET="zhongzhuan"
 if [ -f "$LEDGER" ]; then
+  LEDGER_BUCKET="$(sed -n 's/^LAST_BUCKET=//p' "$LEDGER" | tail -1)"
+  if [ -n "$LEDGER_BUCKET" ]; then PREV_BUCKET="$LEDGER_BUCKET"; fi
   PREV_KEY="$(sed -n 's/^LAST_KEY=//p' "$LEDGER" | tail -1)"
   if [ -n "$PREV_KEY" ]; then STALE_KEYS+=("$PREV_KEY"); fi
   # Older ledgers recorded ORPHAN= lines for deletes that only LOOKED like they
@@ -173,7 +187,7 @@ if [ "$DRY_RUN" -eq 1 ]; then
   plan "./gradlew assembleDebug           # produces $APK_PATH"
   if [ ${#STALE_KEYS[@]} -gt 0 ]; then
     for k in "${STALE_KEYS[@]}"; do
-      plan "wrangler r2 object delete $BUCKET/$k --remote"
+      plan "wrangler r2 object delete $PREV_BUCKET/$k --remote"
     done
     plan "  (recorded in $LEDGER as this script's own uploads; best-effort,"
     plan "   never read back to confirm — that read is what breaks a delete)"
@@ -207,8 +221,8 @@ step "Built $APK_PATH ($LOCAL_SIZE bytes, md5 $LOCAL_MD5)"
 # a failed delete is not worth aborting a publish over.
 if [ ${#STALE_KEYS[@]} -gt 0 ]; then
   for k in "${STALE_KEYS[@]}"; do
-    step "Deleting previous upload $BUCKET/$k"
-    if DELETE_OUT="$(wrangler r2 object delete "$BUCKET/$k" --remote 2>&1)"; then
+    step "Deleting previous upload $PREV_BUCKET/$k"
+    if DELETE_OUT="$(wrangler r2 object delete "$PREV_BUCKET/$k" --remote 2>&1)"; then
       assert_remote "$DELETE_OUT" "delete"
       step "Deleted $k"
     else
@@ -281,9 +295,10 @@ done
 
 {
   printf '# Written by scripts/publish-debug.sh. Local machine state.\n'
-  printf '# The next run deletes LAST_KEY. Do not point it at anything this\n'
-  printf '# script did not upload: the bucket is shared, cannot be listed, and\n'
-  printf '# deletes are irreversible.\n'
+  printf '# The next run deletes LAST_KEY from LAST_BUCKET. Do not point it at\n'
+  printf '# anything this script did not upload: an R2 bucket cannot be listed\n'
+  printf '# from the CLI, and deletes are irreversible.\n'
+  printf 'LAST_BUCKET=%s\n' "$BUCKET"
   printf 'LAST_KEY=%s\n' "$KEY"
   printf 'LAST_MD5=%s\n' "$LOCAL_MD5"
   printf 'LAST_SIZE=%s\n' "$LOCAL_SIZE"
