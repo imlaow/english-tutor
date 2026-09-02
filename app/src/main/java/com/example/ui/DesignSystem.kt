@@ -12,11 +12,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -27,11 +29,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -63,14 +68,19 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.ui.theme.Accent100
 import com.example.ui.theme.Accent200
+import com.example.ui.theme.Accent2700
 import com.example.ui.theme.Accent300
 import com.example.ui.theme.Accent500
 import com.example.ui.theme.Accent700
 import com.example.ui.theme.FieldLabel
 import com.example.ui.theme.Neutral100
+import com.example.ui.theme.Neutral600
 import com.example.ui.theme.Neutral700
 import com.example.ui.theme.Neutral800
+import com.example.ui.theme.SectionKicker
+import java.util.Locale
 
 /**
  * Shared building blocks for the warm/organic re-theme.
@@ -551,5 +561,139 @@ fun AvatarBadge(
       fontWeight = FontWeight.Bold,
       color = contentColor,
     )
+  }
+}
+
+// ------------------------------------------------------------- grouped card
+
+/** `--radius-lg` — the same 28dp the topic and history cards use. */
+val SettingsCardShape = RoundedCornerShape(28.dp)
+
+/** `--shadow-sm` (`0 1 2` @14%) as a Compose elevation. */
+private val ShadowSm = 2.dp
+
+/**
+ * The scroll container every settings-shaped screen puts its cards in: the
+ * handoff's 18dp gutter, and the 26dp that keeps the first card clear of the top
+ * bar's rounded corners rather than tucked under them.
+ *
+ * A plain scroll rather than a `LazyColumn`, because a card has to know where it
+ * ends to round itself off — these lists are a handful of saved profiles, not a
+ * feed.
+ */
+@Composable
+fun SettingsCardColumn(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+  Column(
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .verticalScroll(rememberScrollState())
+        .navigationBarsPadding()
+        .padding(horizontal = 18.dp, vertical = 26.dp),
+    content = content,
+  )
+}
+
+/**
+ * The rounded, shadowed group the settings hub and the provider screens hang
+ * their rows in.
+ */
+@Composable
+fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+  Column(
+    modifier =
+      modifier
+        .fillMaxWidth()
+        // `shadow` clips to its shape at any non-zero elevation, which is the
+        // card's `overflow: hidden`: without it a pressed row would paint its
+        // tint square over the rounded corners.
+        .shadow(ShadowSm, SettingsCardShape)
+        .background(MaterialTheme.colorScheme.surface),
+    content = content,
+  )
+}
+
+/**
+ * The hairline between two rows of a [SettingsCard].
+ *
+ * @param indent how far in it starts, so it runs under the text rather than under
+ *   the row's leading circle or radio (`margin-left: 70px` in the handoff).
+ */
+@Composable
+fun SettingsCardDivider(indent: Dp) {
+  HorizontalDivider(
+    modifier = Modifier.padding(start = indent),
+    thickness = 1.dp,
+    color = MaterialTheme.colorScheme.outlineVariant,
+  )
+}
+
+/** The uppercase label above a [SettingsCard]. */
+@Composable
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+  Text(
+    text = text.uppercase(Locale.US),
+    style = SectionKicker,
+    color = Accent2700,
+    modifier = modifier,
+  )
+}
+
+/**
+ * One row of a [SettingsCard]: an optional leading mark, the label and its current
+ * value, and an optional trailing control.
+ *
+ * The metrics are the settings hub's, so a provider list reads as the same
+ * furniture one level down: 18/17 padding, `titleSmall` over `bodySmall`, and
+ * accent-100 while held.
+ *
+ * @param subtitle the live value, not a description. Null collapses to one line.
+ * @param onClick null for a row that is only a label — the row then takes no
+ *   press tint and no button semantics.
+ */
+@Composable
+fun SettingsRow(
+  title: String,
+  subtitle: String?,
+  onClick: (() -> Unit)?,
+  modifier: Modifier = Modifier,
+  enabled: Boolean = true,
+  titleColor: Color = MaterialTheme.colorScheme.onSurface,
+  leading: @Composable (() -> Unit)? = null,
+  trailing: @Composable (() -> Unit)? = null,
+) {
+  val interactionSource = remember { MutableInteractionSource() }
+  val pressed by interactionSource.collectIsPressedAsState()
+  Row(
+    modifier =
+      modifier
+        .fillMaxWidth()
+        .background(if (pressed && enabled) Accent100 else Color.Transparent)
+        .then(
+          if (onClick != null) {
+            Modifier.clickable(
+              interactionSource = interactionSource,
+              indication = null,
+              enabled = enabled,
+              role = Role.Button,
+              onClick = onClick,
+            )
+          } else {
+            Modifier
+          }
+        )
+        .padding(horizontal = 18.dp, vertical = 17.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+  ) {
+    leading?.invoke()
+    Column(modifier = Modifier.weight(1f)) {
+      Text(text = title, style = MaterialTheme.typography.titleSmall, color = titleColor)
+      if (subtitle != null) {
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = Neutral600)
+      }
+    }
+    trailing?.invoke()
   }
 }

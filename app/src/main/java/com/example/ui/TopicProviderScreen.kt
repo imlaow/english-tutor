@@ -1,17 +1,14 @@
 package com.example.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +26,12 @@ import com.example.R
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.displayName
 import com.example.viewmodel.ApiProfileViewModel
+
+/**
+ * Indent of the hairline between two rows, so it starts under the option's name
+ * rather than under the radio's 48dp tap target.
+ */
+private val RowDividerIndent = 80.dp
 
 /**
  * Lets the user pick which configured provider generates the home-screen topic
@@ -63,9 +66,9 @@ fun TopicProviderScreen(
  * the screenshot specimens render it directly, and it takes plain values and
  * lambdas.
  *
- * The handoff never drew this screen. Its shell is the design's top bar and 44dp
- * button and the selection mark is its `.radio` dot, by way of [WarmRadio]; the
- * rows themselves stay Material list items, which the design has no answer for.
+ * The handoff never drew this screen, so it borrows the settings hub's furniture:
+ * the design's top bar and 44dp button, its `.radio` dot by way of [WarmRadio],
+ * and the same grouped card of [SettingsRow]s one level up.
  *
  * @param selectedProfileId null when topics follow the chat provider.
  * @param defaultSubtitle what that fallback currently resolves to, resolved by
@@ -106,13 +109,11 @@ internal fun TopicProviderContent(
             return@Column
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-        ) {
-            item(key = "default") {
+        SettingsCardColumn(modifier = Modifier.weight(1f)) {
+            SectionLabel("Generate topics with")
+            Spacer(modifier = Modifier.height(10.dp))
+
+            SettingsCard {
                 TopicProviderRow(
                     title = "Use chat provider (default)",
                     subtitle = defaultSubtitle,
@@ -120,16 +121,16 @@ internal fun TopicProviderContent(
                     onSelect = { onSelect(null) },
                     testTag = "topic_provider_default"
                 )
-                HorizontalDivider()
-            }
-            items(profiles, key = { it.id }) { profile ->
-                TopicProviderRow(
-                    title = profile.name,
-                    subtitle = "${profile.apiSpec.displayName} · ${profile.effectiveModel}",
-                    selected = selectedProfileId == profile.id,
-                    onSelect = { onSelect(profile.id) },
-                    testTag = "topic_provider_${profile.id}"
-                )
+                profiles.forEach { profile ->
+                    SettingsCardDivider(RowDividerIndent)
+                    TopicProviderRow(
+                        title = profile.name,
+                        subtitle = "${profile.apiSpec.displayName} · ${profile.effectiveModel}",
+                        selected = selectedProfileId == profile.id,
+                        onSelect = { onSelect(profile.id) },
+                        testTag = "topic_provider_${profile.id}"
+                    )
+                }
             }
         }
     }
@@ -143,16 +144,12 @@ private fun TopicProviderRow(
     onSelect: () -> Unit,
     testTag: String
 ) {
-    ListItem(
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
-        leadingContent = {
-            WarmRadio(selected = selected, onClick = onSelect)
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(testTag)
-            .clickable(onClick = onSelect)
+    SettingsRow(
+        title = title,
+        subtitle = subtitle,
+        onClick = onSelect,
+        modifier = Modifier.testTag(testTag),
+        leading = { WarmRadio(selected = selected, onClick = onSelect) }
     )
 }
 

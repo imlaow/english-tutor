@@ -1,23 +1,19 @@
 package com.example.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +35,12 @@ import com.example.R
 import com.example.data.settings.ApiProfile
 import com.example.data.settings.displayName
 import com.example.viewmodel.ApiProfileViewModel
+
+/**
+ * Indent of the hairline between two rows, so it starts under the profile name
+ * rather than under the radio's 48dp tap target.
+ */
+private val RowDividerIndent = 80.dp
 
 /**
  * Lists every saved API profile and lets the user pick which one is active.
@@ -96,9 +98,9 @@ fun ApiProfileListScreen(
  * the screenshot specimens render it directly, and it takes plain values and
  * lambdas. The delete confirmation stays outside, with the state it arms.
  *
- * The handoff never drew this screen. Its shell is the design's top bar and 44dp
- * buttons and the selection mark is its `.radio` dot, by way of [WarmRadio]; the
- * rows themselves stay Material list items, which the design has no answer for.
+ * The handoff never drew this screen, so it borrows the settings hub's furniture:
+ * the design's top bar and 44dp buttons, its `.radio` dot by way of [WarmRadio],
+ * and the same grouped card of [SettingsRow]s one level up.
  */
 @Composable
 internal fun ApiProfileListContent(
@@ -147,21 +149,22 @@ internal fun ApiProfileListContent(
             return@Column
         }
 
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-        ) {
-            items(profiles, key = { it.id }) { profile ->
-                ApiProfileRow(
-                    profile = profile,
-                    isActive = profile.id == activeProfileId,
-                    onSelect = { onSelect(profile) },
-                    onEdit = { onEdit(profile) },
-                    onToggleEnabled = { onToggleEnabled(profile) },
-                    onDelete = { onDelete(profile) }
-                )
+        SettingsCardColumn(modifier = Modifier.weight(1f)) {
+            SectionLabel("Providers")
+            Spacer(modifier = Modifier.height(10.dp))
+
+            SettingsCard {
+                profiles.forEachIndexed { index, profile ->
+                    if (index > 0) SettingsCardDivider(RowDividerIndent)
+                    ApiProfileRow(
+                        profile = profile,
+                        isActive = profile.id == activeProfileId,
+                        onSelect = { onSelect(profile) },
+                        onEdit = { onEdit(profile) },
+                        onToggleEnabled = { onToggleEnabled(profile) },
+                        onDelete = { onDelete(profile) }
+                    )
+                }
             }
         }
     }
@@ -183,23 +186,29 @@ private fun ApiProfileRow(
         if (profile.enabled) MaterialTheme.colorScheme.onSurface
         else MaterialTheme.colorScheme.onSurfaceVariant
 
-    ListItem(
-        headlineContent = { Text(profile.name) },
-        supportingContent = {
-            Text("${profile.apiSpec.displayName} · ${profile.effectiveModel}")
-        },
-        leadingContent = {
+    SettingsRow(
+        title = profile.name,
+        subtitle = "${profile.apiSpec.displayName} · ${profile.effectiveModel}",
+        onClick = onSelect,
+        enabled = profile.enabled,
+        titleColor = contentColor,
+        leading = {
             WarmRadio(
                 selected = isActive,
                 onClick = onSelect.takeIf { profile.enabled },
                 enabled = profile.enabled
             )
         },
-        trailingContent = {
-            IconButton(onClick = { menuExpanded = true }) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_more_vertical),
-                    contentDescription = "More options"
+        trailing = {
+            // The menu anchors to this box rather than to the button, which has no
+            // slot of its own.
+            Box {
+                IconButton44(
+                    icon = painterResource(R.drawable.ic_more_vertical),
+                    contentDescription = "More options",
+                    onClick = { menuExpanded = true },
+                    size = 36.dp,
+                    iconSize = 20.dp
                 )
                 DropdownMenu(
                     expanded = menuExpanded,
@@ -229,14 +238,7 @@ private fun ApiProfileRow(
                 }
             }
         },
-        colors = ListItemDefaults.colors(
-            headlineColor = contentColor,
-            supportingColor = MaterialTheme.colorScheme.onSurfaceVariant
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("api_profile_${profile.id}")
-            .clickable(enabled = profile.enabled, onClick = onSelect)
+        modifier = Modifier.testTag("api_profile_${profile.id}")
     )
 }
 
