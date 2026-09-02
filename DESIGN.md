@@ -178,6 +178,11 @@ so it stays with the screen that owns the data behind it.
 | `WarmTextField` | Pill field on the surface fill, accent caret and focus ring. |
 | `WarmRadio` | 16dp dot; selected is an accent rim, a ring of page colour, then an accent centre. |
 | `ChoicePill` | One option of a single choice. `shape` and `border` are open so it serves both as a standalone chip and butted inside a segmented group. |
+| `SettingsCardColumn` | The scroll container a settings-shaped screen puts its cards in: 18dp gutter, 26dp above the first card. |
+| `SettingsCard` | The grouped card those rows live in — radius 28, shadow-sm, clipped so a pressed row cannot paint over the corners. |
+| `SettingsCardDivider` | The hairline between two rows, indented past the leading mark: 70dp under an icon circle, 80dp under a `WarmRadio`. |
+| `SectionLabel` | The uppercase kicker above a card. |
+| `SettingsRow` | One row of a card: 18/17 padding, `titleSmall` over `bodySmall`, accent-100 while held, with optional leading and trailing slots. |
 
 ---
 
@@ -218,6 +223,12 @@ Onboarding and the three API-profile screens were never drawn. They use the shel
 (`WarmTopBar`, `IconButton44`) and the form controls above, but their layout is their own
 and they have no drawing to be measured against — their goldens use the default device
 qualifier rather than the handoff's 393dp canvas.
+
+The three provider pickers — API configuration, topic generation, text to speech — do have
+a model to follow, though: the settings hub one level up. They use `SettingsCardColumn` /
+`SettingsCard` / `SettingsRow` rather than Material list items, so a list of saved
+providers is the same furniture as the settings rows that led to it, and no list runs
+edge-to-edge under the top bar's rounded corners.
 
 Anything this file does not specify falls back to whatever the Compose components do by
 default. That is a gap, not a standard: if you find yourself deciding a colour or a

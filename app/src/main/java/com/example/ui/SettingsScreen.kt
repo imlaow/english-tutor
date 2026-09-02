@@ -1,25 +1,14 @@
 package com.example.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,14 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,21 +32,11 @@ import com.example.BuildConfig
 import com.example.R
 import com.example.data.repository.ApiProfileRepository
 import com.example.data.repository.TtsProfileRepository
-import com.example.ui.theme.Accent100
-import com.example.ui.theme.Accent2700
 import com.example.ui.theme.Neutral500
 import com.example.ui.theme.Neutral600
-import com.example.ui.theme.SectionKicker
-import java.util.Locale
-
-/** `--radius-lg` — the same 28dp the topic and history cards use. */
-private val SettingsCardShape = RoundedCornerShape(28.dp)
-
-/** `--shadow-sm` (`0 1 2` @14%) as a Compose elevation. */
-private val ShadowSm = 2.dp
 
 /**
- * Indent of the hairline between the two rows, so it starts under the text rather
+ * Indent of the hairline between two rows, so it starts under the text rather
  * than under the icon circle (`margin-left: 70px` in the handoff).
  */
 private val RowDividerIndent = 70.dp
@@ -142,30 +119,11 @@ internal fun SettingsContent(
             }
         )
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(horizontal = 18.dp, vertical = 26.dp)
-        ) {
-            Text(
-                text = "Model".uppercase(Locale.US),
-                style = SectionKicker,
-                color = Accent2700
-            )
+        SettingsCardColumn(modifier = Modifier.weight(1f)) {
+            SectionLabel("Model")
             Spacer(modifier = Modifier.height(10.dp))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // `shadow` clips to its shape at any non-zero elevation, which is
-                    // the card's `overflow: hidden`: without it a pressed row would
-                    // paint its tint square over the rounded corners.
-                    .shadow(ShadowSm, SettingsCardShape)
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
+            SettingsCard {
                 SettingsEntry(
                     title = "API configuration",
                     subtitle = apiSubtitle,
@@ -175,11 +133,7 @@ internal fun SettingsContent(
                     onClick = onApiConfiguration,
                     modifier = Modifier.testTag("settings_api_configuration")
                 )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = RowDividerIndent),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
+                SettingsCardDivider(RowDividerIndent)
                 SettingsEntry(
                     title = "Topic generation",
                     subtitle = topicSubtitle,
@@ -189,11 +143,7 @@ internal fun SettingsContent(
                     onClick = onTopicGeneration,
                     modifier = Modifier.testTag("settings_topic_generation")
                 )
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = RowDividerIndent),
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
+                SettingsCardDivider(RowDividerIndent)
                 SettingsEntry(
                     title = "Text to speech",
                     subtitle = ttsSubtitle,
@@ -246,53 +196,33 @@ private fun SettingsEntry(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(if (pressed) Accent100 else Color.Transparent)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                role = Role.Button,
-                onClick = onClick
-            )
-            .padding(horizontal = 18.dp, vertical = 17.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(iconBackground, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
+    SettingsRow(
+        title = title,
+        subtitle = subtitle,
+        onClick = onClick,
+        modifier = modifier,
+        leading = {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(iconBackground, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        },
+        trailing = {
             Icon(
-                painter = icon,
+                painter = painterResource(R.drawable.ic_chevron_right),
                 contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(20.dp)
+                tint = Neutral500,
+                modifier = Modifier.size(18.dp)
             )
         }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = Neutral600
-            )
-        }
-        Icon(
-            painter = painterResource(R.drawable.ic_chevron_right),
-            contentDescription = null,
-            tint = Neutral500,
-            modifier = Modifier.size(18.dp)
-        )
-    }
+    )
 }
