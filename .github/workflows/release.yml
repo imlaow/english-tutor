@@ -1,0 +1,180 @@
+name: Release
+
+# Cutting a release is pushing a `v*` tag. Everything else here is a
+# consequence of that: the tag names the version, the version is checked
+# against the one compiled into the APK, and the APK is attached to a GitHub
+# release for that tag.
+#
+# workflow_dispatch builds and signs the same APK but publishes nothing — it
+# exists so the signing secrets can be proven working without spending a tag.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Creating the release and uploading its asset both write to the repository.
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fail here rather than four minutes into a Gradle build. The release
+      # signing key is gitignored (`*.jks`), so CI can only get it from
+      # secrets, and an unset password reaches AGP as a null and dies with a
+      # message that says nothing about GitHub secrets.
+      #
+      #   gh secret set RELEASE_KEYSTORE_BASE64 < <(base64 -w0 my-upload-key.jks)
+      #   gh secret set RELEASE_STORE_PASSWORD
+      #   gh secret set RELEASE_KEY_PASSWORD
+      #
+      # The key alias is `upload`, hardcoded in app/build.gradle.kts.
+      - name: Check signing secrets are present
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$KEYSTORE_BASE64" ] || missing="$missing RELEASE_KEYSTORE_BASE64"
+          [ -n "$STORE_PASSWORD" ]  || missing="$missing RELEASE_STORE_PASSWORD"
+          [ -n "$KEY_PASSWORD" ]    || missing="$missing RELEASE_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::missing repository secret(s):$missing"
+            echo "See the comment above this step in .github/workflows/release.yml." >&2
+            exit 1
+          fi
+
+      # The tag is not the source of truth for the version — versionName in
+      # app/build.gradle.kts is, because that is what BuildConfig.VERSION_NAME
+      # shows on the Settings screen. Tagging v1.2.0 while the build still says
+      # 1.0 would ship a release whose own About line contradicts its name, so
+      # this refuses instead of quietly rewriting either side. Bump versionName
+      # in a commit first, then tag it.
+      - name: Check the tag matches versionName
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          build_version="$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' \
+            app/build.gradle.kts | head -1)"
+          if [ "$tag_version" != "$build_version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME implies version $tag_version, but app/build.gradle.kts has versionName \"$build_version\""
+            exit 1
+          fi
+          echo "Releasing version $build_version"
+
+      # Same one-second grep CI runs, and for the same reason: it should not
+      # take a toolchain to discover a raw hex colour.
+      - name: Design system compliance
+        run: ./scripts/check-design-system.sh
+
+      # gradle/gradle-daemon-jvm.properties pins the daemon to 25. Installing it
+      # here keeps Gradle from downloading a toolchain from foojay on every run.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # A tag can be cut from anywhere, not only from a commit CI already
+      # green-lit on main. Unit tests and screenshot goldens are one task graph,
+      # so this single command covers both.
+      - name: Unit tests and screenshot verification
+        run: ./gradlew verifyRoborazziDebug
+
+      - name: Upload screenshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: |
+            app/build/outputs/roborazzi/
+            app/build/reports/tests/
+          retention-days: 14
+
+      # Decoded outside the workspace so no later step can sweep it into an
+      # artifact or a release asset. RUNNER_TEMP is wiped with the runner.
+      - name: Decode the signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          keystore="$RUNNER_TEMP/release.jks"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$keystore"
+          [ -s "$keystore" ] || { echo "::error::decoded keystore is empty — is RELEASE_KEYSTORE_BASE64 valid base64?"; exit 1; }
+          echo "KEYSTORE_PATH=$keystore" >> "$GITHUB_ENV"
+
+      # No .env is written. The repository is public, so a release APK is a
+      # public artifact, and .env keys land in BuildConfig in cleartext. Without
+      # one the secrets plugin falls back to .env.example's YOUR_* placeholders,
+      # which TtsProfile.buildConfigProfile already recognises as "no built-in
+      # key" — the release simply asks the user for their own Azure key in
+      # Settings, which is the intended path for anyone but the author.
+      - name: Assemble release APK
+        env:
+          STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      # `app-release.apk` says nothing once downloaded next to five others.
+      # Name the file after the app and the version it actually carries.
+      - name: Name and checksum the APK
+        id: apk
+        run: |
+          src=app/build/outputs/apk/release/app-release.apk
+          [ -f "$src" ] || { echo "::error::build reported success but $src is missing"; exit 1; }
+
+          version="$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' \
+            app/build.gradle.kts | head -1)"
+          name="english-tutor-${version}.apk"
+
+          mkdir -p dist
+          cp "$src" "dist/$name"
+          ( cd dist && sha256sum "$name" > "$name.sha256" )
+
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "### $name" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          ls -l "dist/$name" | awk '{print $5 " bytes"}' >> "$GITHUB_STEP_SUMMARY"
+          cat "dist/$name.sha256" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      # Always uploaded, so a workflow_dispatch run is still good for something:
+      # it hands back an installable, correctly signed APK without a release.
+      - name: Upload APK as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+      # `gh release create` refuses a tag that already has a release, which is
+      # the behaviour we want: re-running a tag build must not silently replace
+      # a published binary people may already have installed.
+      - name: Publish the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "English Tutor ${{ steps.apk.outputs.version }}" \
+            --generate-notes \
+            "dist/${{ steps.apk.outputs.name }}" \
+            "dist/${{ steps.apk.outputs.name }}.sha256"
+
+      - name: Remove the keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"
