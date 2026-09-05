@@ -38,6 +38,14 @@ key.
    Speech key, its region and (optionally) a voice. **Both keys are entered in the app.
    There is no build-time path for either.**
 
+A voice profile also has four optional expression fields — speaking style, style degree,
+pitch and speed — which are sent as SSML. Leave them blank and the voice speaks exactly as
+it did before they existed. Two things to know before reaching for them: Azure silently
+ignores a style the chosen voice does not support (no error, it simply speaks neutrally),
+and it clamps pitch to roughly 0.5–1.5× the original, so `+45%` is about the practical
+ceiling — `+100%` will not do what it sounds like it should. HD voices (the ones with a
+colon in the name) ignore pitch and speed entirely.
+
 The app asks for microphone permission on the first tap of the mic, and needs network
 access for the model and for speech synthesis.
 

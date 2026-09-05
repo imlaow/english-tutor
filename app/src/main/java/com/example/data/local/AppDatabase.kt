@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ApiProfileEntity::class,
         TtsProfileEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class)
@@ -102,6 +102,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // v6 adds the expression knobs to a voice profile: the speaking style and its
+        // degree, plus a pitch and rate. All four are text with a blank default, which
+        // means "leave it to the voice" — the same contract `voice` already had. Blank
+        // columns emit no SSML at all, so an upgraded profile sounds exactly as before.
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `tts_profile` ADD COLUMN `style` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `tts_profile` ADD COLUMN `style_degree` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `tts_profile` ADD COLUMN `pitch` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE `tts_profile` ADD COLUMN `rate` TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -111,7 +124,13 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     DATABASE_NAME
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                ).addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3,
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6
+                )
                     .build()
                     .also { instance = it }
             }

@@ -1,6 +1,7 @@
 package com.example.manager
 
 import android.util.Log
+import com.example.data.settings.SynthesizerKey
 import com.example.data.settings.TtsConfig
 import com.microsoft.cognitiveservices.speech.ResultReason
 import com.microsoft.cognitiveservices.speech.SpeechConfig
@@ -22,6 +23,12 @@ import kotlinx.coroutines.launch
  * [configure], which the composition root keeps pointed at the active TTS
  * profile. Until one does, [speak] has nothing to speak with and says so in the
  * log rather than constructing a synthesizer that would fail on every utterance.
+ *
+ * Every utterance is sent as SSML, built by [buildSsml] from the profile's
+ * expression fields. Note that the SSML's own `<voice name>` outranks the
+ * `speechSynthesisVoiceName` set on the SpeechConfig: the property is kept as a
+ * harmless fallback, but the document is what actually decides which voice
+ * speaks.
  */
 object TtsManager {
 
@@ -37,8 +44,10 @@ object TtsManager {
 
     // What the cached synthesizer was built from, so a changed key, region or
     // voice is noticed even though the synthesizer itself cannot be re-pointed.
+    // Deliberately the key and not the whole config: the expression fields ride
+    // in the SSML, so changing a pitch must not throw away a warm connection.
     @Volatile
-    private var synthesizerConfig: TtsConfig? = null
+    private var synthesizerKey: SynthesizerKey? = null
 
     /**
      * Points playback at [config], or at nothing when it is null. Cheap to call
@@ -48,23 +57,24 @@ object TtsManager {
     fun configure(config: TtsConfig?) {
         synchronized(this) {
             if (this.config == config) return
+            val rebuild = this.config?.synthesizerKey != config?.synthesizerKey
             this.config = config
-            closeSynthesizer()
+            if (rebuild) closeSynthesizer()
         }
     }
 
-    private fun getOrCreateSynthesizer(config: TtsConfig): SpeechSynthesizer =
+    private fun getOrCreateSynthesizer(key: SynthesizerKey): SpeechSynthesizer =
         synchronized(this) {
-            synthesizer?.takeIf { synthesizerConfig == config }?.let { return@synchronized it }
+            synthesizer?.takeIf { synthesizerKey == key }?.let { return@synchronized it }
             // Either there is none, or the one held was built from credentials the
             // user has since changed; a synthesizer cannot be re-pointed.
             closeSynthesizer()
             SpeechSynthesizer(
-                SpeechConfig.fromSubscription(config.speechKey, config.region)
-                    .apply { speechSynthesisVoiceName = config.voice }
+                SpeechConfig.fromSubscription(key.speechKey, key.region)
+                    .apply { speechSynthesisVoiceName = key.voice }
             ).also {
                 synthesizer = it
-                synthesizerConfig = config
+                synthesizerKey = key
             }
         }
 
@@ -78,9 +88,10 @@ object TtsManager {
         }
         scope.launch {
             try {
-                val synth = getOrCreateSynthesizer(config)
+                val synth = getOrCreateSynthesizer(config.synthesizerKey)
                 synth.StopSpeakingAsync().get()
-                val result = synth.SpeakTextAsync(text).get()
+                val ssml = buildSsml(config.voice, config.expression, text)
+                val result = synth.SpeakSsmlAsync(ssml).get()
                 try {
                     if (result.reason == ResultReason.Canceled) {
                         val details = SpeechSynthesisCancellationDetails.fromResult(result)
@@ -116,6 +127,6 @@ object TtsManager {
     private fun closeSynthesizer() {
         synthesizer?.close()
         synthesizer = null
-        synthesizerConfig = null
+        synthesizerKey = null
     }
 }

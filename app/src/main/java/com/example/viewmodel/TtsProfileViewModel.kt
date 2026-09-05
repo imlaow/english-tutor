@@ -11,8 +11,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Which required field the user left blank, so the form can point at it. */
-enum class TtsProfileFormError { NAME, SPEECH_KEY, REGION }
+/**
+ * Which field the form should point at: the three the user left blank, plus the
+ * style degree, which is the one optional field whose value can be wrong rather
+ * than merely missing.
+ */
+enum class TtsProfileFormError { NAME, SPEECH_KEY, REGION, STYLE_DEGREE }
 
 /**
  * Backs both the voice list and the new/edit form. Compose only reads state and
@@ -68,6 +72,13 @@ class TtsProfileViewModel(
      * Trims stray whitespace and saves. An empty voice stays empty and falls
      * back to [TtsProfile.DEFAULT_VOICE] at playback time; name, key and region
      * have no fallback, so a blank one aborts the save and reports [formError].
+     *
+     * Of the four expression fields only the style degree is validated, because
+     * it is the only one where a wrong value is knowable here. Azure silently
+     * ignores a style the voice does not support — the app cannot tell a typo
+     * from a style it has not heard of — and pitch and rate each have five valid
+     * syntaxes (`%`, `Hz`, `st`, named constants like `x-high`, and absolute
+     * values), so a rejection here would be a guess dressed up as a rule.
      */
     fun save(onSaved: () -> Unit) {
         val normalized = _draft.value?.normalized() ?: return
@@ -75,6 +86,10 @@ class TtsProfileViewModel(
             normalized.name.isBlank() -> TtsProfileFormError.NAME
             normalized.speechKey.isBlank() -> TtsProfileFormError.SPEECH_KEY
             normalized.region.isBlank() -> TtsProfileFormError.REGION
+            // Azure's documented range. toDoubleOrNull() also rejects a
+            // comma-decimal "1,6" off a European-locale keyboard, which the
+            // service would reject too — hence the field's "0.01 to 2" copy.
+            !normalized.styleDegree.isValidStyleDegree() -> TtsProfileFormError.STYLE_DEGREE
             else -> null
         }
         if (error != null) {
@@ -92,8 +107,21 @@ class TtsProfileViewModel(
         name = name.trim(),
         speechKey = speechKey.trim(),
         region = region.trim(),
-        voice = voice.trim()
+        voice = voice.trim(),
+        style = style.trim(),
+        styleDegree = styleDegree.trim(),
+        pitch = pitch.trim(),
+        rate = rate.trim()
     )
+
+    /** Blank is valid — it means "leave the degree to Azure". */
+    private fun String.isValidStyleDegree(): Boolean =
+        isBlank() || (toDoubleOrNull()?.let { it in STYLE_DEGREE_RANGE } == true)
+
+    private companion object {
+        /** The range Azure documents for `styledegree`. */
+        val STYLE_DEGREE_RANGE = 0.01..2.0
+    }
 }
 
 /**
