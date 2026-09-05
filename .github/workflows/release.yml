@@ -25,7 +25,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Fail here rather than four minutes into a Gradle build. The release
       # signing key is gitignored (`*.jks`), so CI can only get it from
@@ -78,14 +78,19 @@ jobs:
 
       # gradle/gradle-daemon-jvm.properties pins the daemon to 25. Installing it
       # here keeps Gradle from downloading a toolchain from foojay on every run.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
 
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
 
-      - uses: gradle/actions/setup-gradle@v4
+      # Pinned to v5, not v6, on purpose. v6 moves the caching half of this
+      # action into `gradle-actions-caching`, which is proprietary and governed
+      # by Gradle's commercial Terms of Use rather than the MIT licence the rest
+      # of it carries. v5 is the newest version that runs on Node 24 — which is
+      # all this bump was after — and stays entirely MIT.
+      - uses: gradle/actions/setup-gradle@v5
 
       # A tag can be cut from anywhere, not only from a commit CI already
       # green-lit on main. Unit tests and screenshot goldens are one task graph,
@@ -95,7 +100,7 @@ jobs:
 
       - name: Upload screenshot diffs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screenshot-diffs
           path: |
@@ -154,7 +159,7 @@ jobs:
       # Always uploaded, so a workflow_dispatch run is still good for something:
       # it hands back an installable, correctly signed APK without a release.
       - name: Upload APK as a workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.apk.outputs.name }}
           path: dist/
