@@ -53,24 +53,24 @@ class SsmlTest {
     }
 
     /**
-     * HD voices accept `mstts:express-as` but reject `<prosody>` outright, so the
-     * prosody element is dropped rather than taking the document down with it.
+     * Dragon voices keep the style and the rate but lose the pitch.
      *
-     * This branch cannot be exercised against the subscription this app is built
-     * for: HD voices do not exist in `centralus`, so no amount of on-device
-     * testing will reach it. That is a reason to keep the branch and this test,
-     * not to delete either as dead code — a second profile pointed at an `eastus`
-     * resource reaches it with no code change at all.
+     * The documentation says flatly that `<prosody>` is unsupported on HD, which
+     * would make this a bare voice element. Measured against a real
+     * `canadacentral` subscription it is not: `rate="-50%"` stretches an
+     * `en-US-Ava:DragonHDLatestNeural` utterance to 1.75x, so the element is very
+     * much read. Only pitch is inert — see [buildSsml]'s own notes.
      */
     @Test
-    fun `an HD voice keeps the style and drops the prosody`() {
+    fun `a Dragon voice keeps the style and the rate but drops the pitch`() {
         assertEquals(
             prologue +
-                "<voice name=\"en-US-Ana:DragonHDOmniLatestNeural\">" +
-                "<mstts:express-as style=\"excited\" styledegree=\"1.6\">Hello there." +
+                "<voice name=\"en-US-Ava:DragonHDLatestNeural\">" +
+                "<mstts:express-as style=\"excited\" styledegree=\"1.6\">" +
+                "<prosody rate=\"+5%\">Hello there.</prosody>" +
                 "</mstts:express-as></voice></speak>",
             buildSsml(
-                "en-US-Ana:DragonHDOmniLatestNeural",
+                "en-US-Ava:DragonHDLatestNeural",
                 VoiceExpression(style = "excited", styleDegree = "1.6", pitch = "+12%", rate = "+5%"),
                 "Hello there."
             )
@@ -78,7 +78,7 @@ class SsmlTest {
     }
 
     @Test
-    fun `an HD voice with only a pitch degrades to a bare voice element`() {
+    fun `a Dragon voice with only a pitch degrades to a bare voice element`() {
         // And specifically not to an empty <prosody></prosody>, which would be
         // valid XML the service has no use for.
         assertEquals(
@@ -89,6 +89,37 @@ class SsmlTest {
                 VoiceExpression(pitch = "+12%"),
                 "Hello there."
             )
+        )
+    }
+
+    /**
+     * MAI is the one model that splits the two prosody attributes, and it is not
+     * a hypothetical: `en-US-Harper:MAI-Voice-2` synthesizes in `centralus` even
+     * though the region table shows no MAI column for it. Measured there, `rate`
+     * is honoured to the ratio while `pitch` moves the fundamental the wrong way
+     * and scatters it, so the rate survives and the pitch does not.
+     */
+    @Test
+    fun `a MAI voice keeps the rate but drops the pitch`() {
+        assertEquals(
+            prologue +
+                "<voice name=\"en-US-Harper:MAI-Voice-2\">" +
+                "<mstts:express-as style=\"excited\" styledegree=\"1.6\">" +
+                "<prosody rate=\"-10%\">Hello there.</prosody>" +
+                "</mstts:express-as></voice></speak>",
+            buildSsml(
+                "en-US-Harper:MAI-Voice-2",
+                VoiceExpression(style = "excited", styleDegree = "1.6", pitch = "+12%", rate = "-10%"),
+                "Hello there."
+            )
+        )
+    }
+
+    @Test
+    fun `a MAI voice with only a pitch degrades to a bare voice element`() {
+        assertEquals(
+            prologue + "<voice name=\"en-US-Harper:MAI-Voice-2\">Hello there.</voice></speak>",
+            buildSsml("en-US-Harper:MAI-Voice-2", VoiceExpression(pitch = "+12%"), "Hello there.")
         )
     }
 
