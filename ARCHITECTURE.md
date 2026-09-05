@@ -7,7 +7,7 @@
 - **Local Database**: Room.
 - **Cloud Database**: Neon PostgreSQL (Interact via Retrofit/Ktor. API Keys injected via local.properties).
 - **AI Chat**: Google Gemini API.
-- **TTS Service**: Azure Cognitive Services Speech SDK. The key, region and voice come from the active TTS profile in Room (Settings -> Text to speech), defaulting to `en-US-JennyNeural`; the `.env` / `BuildConfig` keys remain only as the fallback for a build that has them and no saved profile.
+- **TTS Service**: Azure Cognitive Services Speech SDK. The key, region and voice come from the active TTS profile in Room (Settings -> Text to speech), defaulting to `en-US-JennyNeural`. There is no build-time path: the project no longer applies the Secrets Gradle Plugin, so no speech credential can reach `BuildConfig` or the APK.
 
 ## 2. Module Responsibilities & Package Structure
 All code must strictly follow the structure below. Cross-layer direct calls are strictly prohibited:
@@ -25,7 +25,7 @@ All code must strictly follow the structure below. Cross-layer direct calls are 
    - When fetching recommended topics on the Home screen, the app must query the User Profile from the local Room database first before generating the prompt for Gemini.
 2. **TTS Playback Logic**:
    - Playback control (play/pause/stop) must be handled via the `TtsManager` singleton. Instantiating the SDK directly within Compose UI is strictly prohibited.
-   - `TtsManager` holds no credentials of its own: the composition root calls `configure()` with `TtsProfileRepository.effectiveProfile`, and the manager rebuilds its synthesizer whenever that changes. Nothing else may set them.
+   - `TtsManager` holds no credentials of its own: the composition root calls `configure()` with `TtsProfileRepository.activeProfile`, and the manager rebuilds its synthesizer whenever that changes. Nothing else may set them. With no saved profile the app is mute by design — do not reintroduce a compiled-in fallback.
 
 ## 4. Hard Rules for AI Agent (DO NOT IGNORE)
 1. **Strict Single-Step Execution**: Each session is only allowed to execute ONE specific Task assigned by the user. Automatically planning and executing subsequent unassigned tasks is **STRICTLY PROHIBITED**!
