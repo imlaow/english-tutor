@@ -1,0 +1,27 @@
+English Tutor
+Copyright 2026 Laow
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+--------------------------------------------------------------------------------
+Bundled fonts
+
+The typefaces in app/src/main/res/font/ are not covered by the licence above.
+Both are licensed under the SIL Open Font License, Version 1.1, whose full text
+and copyright notices are in third_party/fonts/OFL.txt.
+
+  Figtree    figtree_regular.ttf, figtree_semibold.ttf, figtree_bold.ttf
+             Copyright 2022 The Figtree Project Authors
+             https://github.com/erikdkennedy/figtree
+
+  Caprasimo  caprasimo_regular.ttf
+             Copyright 2023 The Caprasimo Project Authors
+             https://github.com/docrepair-fonts/caprasimo-fonts
+
+--------------------------------------------------------------------------------
+Dependencies
+
+Libraries resolved at build time keep their own licences and are not
+redistributed in this repository. One is not open source: the Azure Cognitive
+Services Speech SDK (com.microsoft.cognitiveservices.speech) is proprietary and
+covered by Microsoft's own terms, which bind anyone distributing a built APK.
