@@ -7,7 +7,7 @@
 - **Local Database**: Room.
 - **Cloud Database**: Neon PostgreSQL (Interact via Retrofit/Ktor. API Keys injected via local.properties).
 - **AI Chat**: Google Gemini API.
-- **TTS Service**: Azure Cognitive Services Speech SDK. The key, region and voice come from the active TTS profile in Room (Settings -> Text to speech), defaulting to `en-US-JennyNeural`. There is no build-time path: the project no longer applies the Secrets Gradle Plugin, so no speech credential can reach `BuildConfig` or the APK.
+- **TTS Service**: Azure Cognitive Services Speech SDK. The key, region, voice and the optional expression knobs — speaking style, style degree, pitch and rate — come from the active TTS profile in Room (Settings -> Text to speech), with the voice defaulting to `en-US-JennyNeural`. Every utterance is synthesized as SSML (`manager/Ssml.kt`); with all four expression fields blank the document is a bare `<voice>` element, which is what the service received before they existed. There is no build-time path: the project no longer applies the Secrets Gradle Plugin, so no speech credential can reach `BuildConfig` or the APK.
 
 ## 2. Module Responsibilities & Package Structure
 All code must strictly follow the structure below. Cross-layer direct calls are strictly prohibited:
@@ -26,6 +26,7 @@ All code must strictly follow the structure below. Cross-layer direct calls are 
 2. **TTS Playback Logic**:
    - Playback control (play/pause/stop) must be handled via the `TtsManager` singleton. Instantiating the SDK directly within Compose UI is strictly prohibited.
    - `TtsManager` holds no credentials of its own: the composition root calls `configure()` with `TtsProfileRepository.activeProfile`, and the manager rebuilds its synthesizer whenever that changes. Nothing else may set them. With no saved profile the app is mute by design — do not reintroduce a compiled-in fallback.
+   - The rebuild is keyed on `SynthesizerKey` — key, region and voice — not on the whole `TtsConfig`. The expression fields are per-utterance SSML, so editing a pitch must not throw away the open synthesizer and its warm connection. Anything added to `TtsConfig` that affects the `SpeechConfig` must be added to `SynthesizerKey` too, or the manager will keep speaking through a stale synthesizer.
 
 ## 4. Hard Rules for AI Agent (DO NOT IGNORE)
 1. **Strict Single-Step Execution**: Each session is only allowed to execute ONE specific Task assigned by the user. Automatically planning and executing subsequent unassigned tasks is **STRICTLY PROHIBITED**!

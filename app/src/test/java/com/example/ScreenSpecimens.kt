@@ -83,7 +83,16 @@ private val SpecimenSecondProfile =
  * voice name typed out here.
  */
 private val SpecimenVoice =
-    TtsProfile(id = "specimen-voice", name = "Azure personal", region = "eastus")
+    TtsProfile(
+        id = "specimen-voice",
+        name = "Azure personal",
+        region = "eastus",
+        // Azure's own vocabulary for an expression, not prose lifted from the
+        // handoff — these two exist so the edit capture pins a filled expression
+        // field, while pitch and rate stay blank to pin the placeholder beside it.
+        style = "cheerful",
+        styleDegree = "1.4",
+    )
 
 /** A second voice, disabled so a capture shows both row states at once. */
 private val SpecimenSecondVoice =
@@ -382,6 +391,10 @@ internal fun TtsProfileListSpecimen(
  * capture also pins the placeholder — which is the default voice constant, not a
  * name written out here.
  *
+ * The expression fields are half filled for the same reason: [SpecimenVoice]
+ * carries a style and a degree, and leaves pitch and rate blank, so one capture
+ * shows both a typed-in value and a placeholder.
+ *
  * The key is a placeholder of the right shape, not a credential.
  */
 @Composable
@@ -397,6 +410,10 @@ internal fun TtsProfileEditSpecimen(
         onSpeechKeyChange = {},
         onRegionChange = {},
         onVoiceChange = {},
+        onStyleChange = {},
+        onStyleDegreeChange = {},
+        onPitchChange = {},
+        onRateChange = {},
         onEnabledChange = {},
         onSave = {},
     )

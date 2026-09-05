@@ -112,7 +112,13 @@ class ThemeScreenshotTest {
 
     @Test fun tts_profile_list() = capture("tts_profile_list") { TtsProfileListSpecimen() }
 
-    @Test fun tts_profile_edit() = capture("tts_profile_edit") { TtsProfileEditSpecimen() }
+    // Eight fields no longer fit a phone-height window; the form scrolls on device,
+    // but a capture cannot, so this one is photographed on a taller canvas to keep
+    // the switch and the Save button inside the frame. The `+` prefix merges with
+    // the class-level Pixel 8 qualifier, so width and density are untouched.
+    @Test
+    @Config(qualifiers = "+h1400dp")
+    fun tts_profile_edit() = capture("tts_profile_edit") { TtsProfileEditSpecimen() }
 
     /**
      * The real [ChatBubble] from the chat screen — a pure composable with no

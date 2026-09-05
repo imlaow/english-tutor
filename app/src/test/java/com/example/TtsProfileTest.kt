@@ -6,10 +6,20 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.data.local.AppDatabase
 import com.example.data.repository.TtsProfileRepository
 import com.example.data.settings.TtsProfile
+import com.example.data.settings.VoiceExpression
+import com.example.viewmodel.TtsProfileFormError
+import com.example.viewmodel.TtsProfileViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,6 +50,14 @@ class TtsProfileTest {
             field.isAccessible = true
             field.set(null, null)
         }
+    }
+
+    // Only the view model test installs a main dispatcher, but it is undone here
+    // so a failed assertion cannot leak one into the tests that follow.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @After
+    fun resetMainDispatcher() {
+        Dispatchers.resetMain()
     }
 
     @Test
@@ -160,5 +178,162 @@ class TtsProfileTest {
         assertEquals(TtsProfile.DEFAULT_VOICE, profile.toConfig().voice)
         // A voice that was typed in is used verbatim.
         assertEquals("en-GB-RyanNeural", profile.copy(voice = "en-GB-RyanNeural").toConfig().voice)
+    }
+
+    @Test
+    fun `v5 to v6 migration keeps the saved voices and adds the expression columns`() =
+        runBlocking {
+            val context = ApplicationProvider.getApplicationContext<Context>()
+
+            // A user on schema v5: tts_profile exists in its seven-column shape,
+            // copied character for character from MIGRATION_4_5, with a voice
+            // already saved. exportSchema is false, so there is no schema JSON to
+            // cross-check the fixture against — a wrong CREATE TABLE here would
+            // make this test pass for the wrong reason.
+            val dbFile = context.getDatabasePath("app_database")
+            dbFile.parentFile?.mkdirs()
+            if (dbFile.exists()) dbFile.delete()
+            SQLiteDatabase.openOrCreateDatabase(dbFile, null).apply {
+                execSQL(
+                    "CREATE TABLE IF NOT EXISTS `user_profile` (" +
+                        "`id` INTEGER NOT NULL, " +
+                        "`english_level` TEXT NOT NULL, " +
+                        "`learning_goal` TEXT NOT NULL, " +
+                        "`topics_of_interest` TEXT NOT NULL, " +
+                        "`daily_practice_time` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                execSQL(
+                    "CREATE TABLE IF NOT EXISTS `chat_message` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`user_text` TEXT NOT NULL, " +
+                        "`ai_response` TEXT NOT NULL, " +
+                        "`grammar_correction` TEXT, " +
+                        "`timestamp` INTEGER NOT NULL, " +
+                        "`session_id` TEXT NOT NULL DEFAULT 'legacy', " +
+                        "PRIMARY KEY(`id`))"
+                )
+                execSQL(
+                    "CREATE TABLE IF NOT EXISTS `api_profile` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`api_spec` TEXT NOT NULL, " +
+                        "`base_url` TEXT NOT NULL, " +
+                        "`api_key` TEXT NOT NULL, " +
+                        "`model` TEXT NOT NULL, " +
+                        "`enabled` INTEGER NOT NULL, " +
+                        "`sort_order` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                execSQL(
+                    "CREATE TABLE IF NOT EXISTS `tts_profile` (" +
+                        "`id` TEXT NOT NULL, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`speech_key` TEXT NOT NULL, " +
+                        "`region` TEXT NOT NULL, " +
+                        "`voice` TEXT NOT NULL, " +
+                        "`enabled` INTEGER NOT NULL, " +
+                        "`sort_order` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`id`))"
+                )
+                execSQL(
+                    "INSERT INTO tts_profile " +
+                        "(id, name, speech_key, region, voice, enabled, sort_order) " +
+                        "VALUES ('v1', 'Azure', 'key-1', 'centralus', 'en-GB-RyanNeural', 1, 0)"
+                )
+                version = 5 // PRAGMA user_version; tells Room to run MIGRATION_5_6 on open.
+                close()
+            }
+
+            // Room validates the migrated schema against the entities, so four
+            // columns that do not match TtsProfileEntity would throw right here.
+            AppDatabase.getInstance(context)
+
+            val saved = TtsProfileRepository.getInstance(context).getProfile("v1")
+            assertEquals("Azure", saved?.name)
+            assertEquals("key-1", saved?.speechKey)
+            assertEquals("en-GB-RyanNeural", saved?.voice)
+            // The upgraded row is blank in all four, which emits no SSML at all —
+            // it speaks exactly as it did before the upgrade.
+            assertEquals(VoiceExpression(), saved?.toConfig()?.expression)
+        }
+
+    @Test
+    fun `the expression knobs reach the config`() {
+        val profile = TtsProfile(name = "Azure", speechKey = "k", region = "centralus")
+
+        // A profile with nothing set says nothing about expression, which is what
+        // makes the SSML come out as a bare voice element.
+        assertEquals(VoiceExpression(), profile.toConfig().expression)
+
+        val expressive = profile.copy(
+            style = "excited",
+            styleDegree = "1.6",
+            pitch = "+12%",
+            rate = "+5%"
+        )
+        assertEquals(
+            VoiceExpression(style = "excited", styleDegree = "1.6", pitch = "+12%", rate = "+5%"),
+            expressive.toConfig().expression
+        )
+    }
+
+    @Test
+    fun `changing only the pitch keeps the same synthesizer key`() {
+        val profile = TtsProfile(name = "Azure", speechKey = "k", region = "centralus")
+
+        // The pure-data half of the don't-rebuild contract: expression rides in
+        // the SSML, so editing it must not invalidate the open synthesizer. The
+        // manager itself cannot be unit-tested without the native SDK.
+        assertEquals(
+            profile.toConfig().synthesizerKey,
+            profile.copy(pitch = "+12%").toConfig().synthesizerKey
+        )
+        // A voice change still does invalidate it.
+        assertFalse(
+            profile.toConfig().synthesizerKey ==
+                profile.copy(voice = "en-GB-RyanNeural").toConfig().synthesizerKey
+        )
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `an out-of-range style degree blocks the save`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        // Unconfined so save()'s viewModelScope.launch runs eagerly, as in
+        // TopicsViewModelTest — otherwise the write is still queued at the assert.
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        val viewModel = TtsProfileViewModel(TtsProfileRepository.getInstance(context))
+        viewModel.loadForEdit(null)
+        viewModel.updateDraft {
+            it.copy(id = "v1", name = "Azure", speechKey = "k", region = "centralus")
+        }
+
+        var saved = false
+        viewModel.updateDraft { it.copy(styleDegree = "3") }
+        viewModel.save { saved = true }
+        assertEquals(TtsProfileFormError.STYLE_DEGREE, viewModel.formError.value)
+        assertFalse("A rejected draft must not reach Room", saved)
+        assertNull(TtsProfileRepository.getInstance(context).getProfile("v1"))
+
+        // Not a number at all is the same answer — which also covers the
+        // comma-decimal "1,6" a European-locale keyboard produces.
+        viewModel.updateDraft { it.copy(styleDegree = "1,6") }
+        viewModel.save { saved = true }
+        assertEquals(TtsProfileFormError.STYLE_DEGREE, viewModel.formError.value)
+        assertFalse(saved)
+
+        // In range, it saves. What is waited on is the row, not the onSaved
+        // callback: Room's suspend DAO hands the write to its own executor, so
+        // the callback lands on a background thread some time after save()
+        // returns and is no use as a synchronous signal here.
+        viewModel.updateDraft { it.copy(styleDegree = "1.6") }
+        viewModel.save { saved = true }
+        assertNull(viewModel.formError.value)
+        val repository = TtsProfileRepository.getInstance(context)
+        val stored = withTimeout(5_000L) {
+            repository.profiles.first { list -> list.any { it.id == "v1" } }
+        }
+        assertEquals("1.6", stored.first { it.id == "v1" }.styleDegree)
     }
 }
