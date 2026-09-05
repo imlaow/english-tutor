@@ -92,4 +92,9 @@ Four further documents, each owning one thing:
 
 ## Licence
 
-Not currently licensed for redistribution.
+Apache-2.0 — see `LICENSE`.
+
+Two things it does not cover. The bundled Figtree and Caprasimo typefaces are SIL Open
+Font License 1.1; their notices are in `third_party/fonts/OFL.txt`. And the Azure Speech
+SDK is proprietary — it is pulled at build time rather than vendored here, but Microsoft's
+terms bind anyone distributing a built APK. `NOTICE` has the detail on both.
