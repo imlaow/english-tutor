@@ -15,7 +15,9 @@ import com.example.data.settings.VoiceExpression
  * - `<mstts:express-as>` whenever [VoiceExpression.style] is non-blank. Its
  *   `styledegree` rides along only when a degree is given too; a degree with no
  *   style has nowhere to live.
- * - `<prosody>` only for a standard voice with a pitch and/or a rate.
+ * - `<prosody>` whenever a rate is given, and additionally carrying the pitch
+ *   when the voice is one that honours it — see [supportsPitch], which is not
+ *   the same question for both attributes.
  *
  * All blank gives a bare `<voice>` around the text, which is byte for byte what
  * the service received before any of this was configurable.
@@ -29,18 +31,10 @@ import com.example.data.settings.VoiceExpression
 fun buildSsml(voice: String, expression: VoiceExpression, text: String): String {
     val body = StringBuilder()
 
-    // HD, MAI and OpenAI voice names carry a colon (`en-US-Ana:DragonHDOmni-
-    // LatestNeural`); those models reject <prosody> outright, so it is dropped
-    // rather than risking the whole document. The heuristic over-fires on MAI
-    // voices, which is acceptable: no non-standard model documented today
-    // supports <prosody>, and none of them exist in the centralus region this
-    // app's subscription lives in.
-    val supportsProsody = !voice.contains(':')
-    val prosody = if (supportsProsody) {
-        attributes("pitch" to expression.pitch, "rate" to expression.rate)
-    } else {
-        ""
-    }
+    val prosody = attributes(
+        "pitch" to if (supportsPitch(voice)) expression.pitch else "",
+        "rate" to expression.rate
+    )
     val expressAs = if (expression.style.isNotBlank()) {
         // Azure spells it `styledegree`: all lowercase, one word.
         attributes("style" to expression.style, "styledegree" to expression.styleDegree)
@@ -62,6 +56,32 @@ fun buildSsml(voice: String, expression: VoiceExpression, text: String): String 
         body +
         "</voice></speak>"
 }
+
+/**
+ * Whether `<prosody pitch>` reaches [voice] — only a standard voice, which is
+ * every name without a colon.
+ *
+ * `rate` is deliberately not asked the same question: it is emitted for every
+ * voice. The two attributes sit in one element but are honoured separately, and
+ * this was measured rather than read off the documentation, which says only that
+ * `<prosody>` is unsupported on HD — true of pitch, false of rate:
+ *
+ * | voice                                  | `rate="-50%"`      | `pitch="+30%"`            |
+ * |----------------------------------------|--------------------|---------------------------|
+ * | `en-US-SaraNeural` (standard)          | 2.00x duration     | 222.2Hz -> 290.9Hz, x1.309 |
+ * | `en-US-Harper:MAI-Voice-2`             | 2.04x duration     | 212Hz -> 172.7/190.2/202.6 |
+ * | `en-US-Ava:DragonHDLatestNeural`       | 1.75x duration     | lost in run-to-run spread |
+ * | `en-us-jelly:DragonHDOmniLatestNeural` | 1.68x duration     | lost in run-to-run spread |
+ *
+ * The standard voice applies both exactly and reproducibly — three renders of
+ * the same request gave 222.2Hz every time. The others slow down when asked to
+ * but do not move their fundamental: MAI scatters it *downward* under a raised
+ * pitch, and the Dragon models vary more between two identical renders (jelly:
+ * 333.4Hz then 258.2Hz) than the request could account for. So pitch is dropped
+ * for them, and rate is not: no tested model rejects the element, so keeping the
+ * attribute that works costs nothing.
+ */
+private fun supportsPitch(voice: String): Boolean = !voice.contains(':')
 
 /**
  * The non-blank [pairs] as ` name="value"`, or an empty string when none are —
