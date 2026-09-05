@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.stateIn
  * falls back to the first enabled one, so playback never silently uses a
  * configuration the user turned off.
  *
- * The one addition is [effectiveProfile], which resolves the last fallback —
- * the keys baked in at build time — so no caller has to know that path exists.
+ * A saved profile is the only source of credentials. Nothing is compiled into
+ * the build, so with an empty table the app simply cannot speak.
  */
 class TtsProfileRepository private constructor(
     private val dao: TtsProfileDao,
@@ -44,20 +44,13 @@ class TtsProfileRepository private constructor(
     private val _activeProfileId = MutableStateFlow(prefs.getString(KEY_ACTIVE_PROFILE_ID, null))
     val activeProfileId: StateFlow<String?> = _activeProfileId.asStateFlow()
 
-    /** The saved profile in use, or null when nothing has been saved yet. */
+    /**
+     * What the synthesizer is built from. Null means nothing has been saved
+     * yet, and the app cannot speak until the user adds a profile.
+     */
     val activeProfile: StateFlow<TtsProfile?> =
         combine(profiles, _activeProfileId) { list, id -> list.pickActive(id) }
             .stateIn(scope, SharingStarted.Eagerly, null)
-
-    /**
-     * What the synthesizer is actually built from: the active saved profile, or
-     * the build's own keys while none exists. Null means the app cannot speak
-     * and the user has to add a profile.
-     */
-    val effectiveProfile: StateFlow<TtsProfile?> =
-        combine(profiles, _activeProfileId) { list, id ->
-            list.pickActive(id) ?: TtsProfile.buildConfigProfile
-        }.stateIn(scope, SharingStarted.Eagerly, TtsProfile.buildConfigProfile)
 
     suspend fun getProfile(id: String): TtsProfile? = dao.getById(id)?.toDomain()
 

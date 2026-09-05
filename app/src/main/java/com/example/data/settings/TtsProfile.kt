@@ -1,6 +1,5 @@
 package com.example.data.settings
 
-import com.example.BuildConfig
 import com.example.data.local.TtsProfileEntity
 import java.util.UUID
 
@@ -39,46 +38,8 @@ data class TtsProfile(
     companion object {
         /** The voice the app spoke with before any of this was configurable. */
         const val DEFAULT_VOICE = "en-US-JennyNeural"
-
-        /** Id of [buildConfigProfile]; fixed so it can never collide with a saved row. */
-        const val BUILD_CONFIG_ID = "build-config"
-
-        /**
-         * The keys baked in at build time from `.env`, as a profile.
-         *
-         * This is what the app used before Settings could hold a profile, and it
-         * stays the fallback so an existing install — whose user has never seen
-         * that key and could not re-enter it — keeps speaking after the upgrade.
-         * Null when the build carries no key, which is the case for CI and for
-         * anyone building from `.env.example`.
-         *
-         * It is not stored, cannot be edited or deleted, and any saved profile
-         * takes precedence over it.
-         */
-        val buildConfigProfile: TtsProfile? =
-            if (BuildConfig.AZURE_SPEECH_KEY.isRealSecret() &&
-                BuildConfig.AZURE_SPEECH_REGION.isRealSecret()
-            ) {
-                TtsProfile(
-                    id = BUILD_CONFIG_ID,
-                    name = "Built-in key",
-                    speechKey = BuildConfig.AZURE_SPEECH_KEY,
-                    region = BuildConfig.AZURE_SPEECH_REGION
-                )
-            } else {
-                null
-            }
     }
 }
-
-/**
- * False for a value the build never actually got: blank, or one of the
- * `YOUR_*` placeholders `.env.example` supplies when no `.env` is present.
- * Treating a placeholder as a real key would tell the user Settings that a
- * built-in voice is available and then fail on the first utterance.
- */
-private fun String.isRealSecret(): Boolean =
-    isNotBlank() && !startsWith("YOUR_")
 
 fun TtsProfileEntity.toDomain(): TtsProfile = TtsProfile(
     id = id,

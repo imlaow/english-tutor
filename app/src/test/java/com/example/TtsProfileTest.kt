@@ -147,9 +147,9 @@ class TtsProfileTest {
 
         assertNull(repository.activeProfileId.value)
         assertEquals(emptyList<TtsProfile>(), repository.profiles.first { it.isEmpty() })
-        // With no saved profile the app is back on whatever the build carries,
-        // which for a test build (`.env.example` placeholders) is nothing at all.
-        assertEquals(TtsProfile.buildConfigProfile, repository.effectiveProfile.value)
+        // Nothing is compiled in to fall back on, so the app goes mute until the
+        // user saves another profile.
+        assertNull(repository.activeProfile.first { it == null })
     }
 
     @Test

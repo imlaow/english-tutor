@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
             // root keeps it pointed at the profile in effect. Done here rather
             // than in ChatScreen because playback outlives that destination:
             // leaving the chat stops an utterance, it does not unconfigure it.
-            val speechProfile by ttsProfileViewModel.effectiveProfile.collectAsState()
+            val speechProfile by ttsProfileViewModel.activeProfile.collectAsState()
             LaunchedEffect(speechProfile) {
                 TtsManager.configure(speechProfile?.toConfig())
             }

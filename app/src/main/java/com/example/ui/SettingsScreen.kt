@@ -54,9 +54,7 @@ fun SettingsScreen(navController: NavController) {
     val topicProfileId by apiProfileRepository.topicProfileId.collectAsState()
     val topicProfile by apiProfileRepository.topicProfile.collectAsState()
     val ttsProfileRepository = remember { TtsProfileRepository.getInstance(context) }
-    // The effective one, not the active one: with no profile saved the app still
-    // speaks with the keys baked in at build time, and the row has to say so.
-    val ttsProfile by ttsProfileRepository.effectiveProfile.collectAsState()
+    val ttsProfile by ttsProfileRepository.activeProfile.collectAsState()
 
     SettingsContent(
         apiSubtitle = activeProfile?.name ?: "Not configured",

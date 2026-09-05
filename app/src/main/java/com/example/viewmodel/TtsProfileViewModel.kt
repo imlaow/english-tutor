@@ -25,13 +25,10 @@ class TtsProfileViewModel(
     val profiles: StateFlow<List<TtsProfile>> = repository.profiles
 
     /**
-     * The saved profile playback uses — already accounts for a stored id that
-     * points at a disabled or deleted profile.
+     * The profile playback uses — already accounts for a stored id that points
+     * at a disabled or deleted profile. Null until the user saves one.
      */
     val activeProfile: StateFlow<TtsProfile?> = repository.activeProfile
-
-    /** The same, with the build's own keys resolved as the last fallback. */
-    val effectiveProfile: StateFlow<TtsProfile?> = repository.effectiveProfile
 
     // Null until loadForEdit() resolves, which keeps the form from flashing
     // blank fields over an existing profile's values.
